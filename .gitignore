@@ -1,0 +1,5 @@
+.catkin_tools
+.project
+.pydevproject
+.settings
+*.pyc

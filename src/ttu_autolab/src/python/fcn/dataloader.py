@@ -160,7 +160,8 @@ class Dataset():
                                                            camera_coord,
                                                            delta,0,h-delta,w)
 
-        if self.split == 'training' or self.split == 'semi':   
+        if self.split == 'as1' or self.split == 'as1':   
+            print ('aaa')
             # Square crop
             w, h = rgb.size    
             i0, j0, h0, w0 = torchvision.transforms.RandomCrop.get_params(
@@ -207,14 +208,14 @@ class Dataset():
         else:
             w, h = rgb.size
             X,Y,Z = self.get_lid_images_val(h, w, points_set, camera_coord)        
-            rgb_copy = to_tensor(rgb.copy())[0:3]
-            rgb = self.normalize(to_tensor(rgb)[0:3])  #only rgb
+            rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
+            rgb = self.normalize(to_tensor(np.array(rgb))[0:3])  #only rgb
 
-        X = to_tensor(X)
-        Y = to_tensor(Y)
-        Z = to_tensor(Z)
+        X = to_tensor(np.array(X))
+        Y = to_tensor(np.array(Y))
+        Z = to_tensor(np.array(Z))
         lid_images = torch.cat((X,Y,Z),0)
-        annotation = to_tensor(annotation).type(torch.LongTensor).squeeze(0)
+        annotation = to_tensor(np.array(annotation)).type(torch.LongTensor).squeeze(0)
     
         return {'rgb':rgb, 'rgb_orig':rgb_copy, 'lidar':lid_images, 
                 'annotation':annotation}

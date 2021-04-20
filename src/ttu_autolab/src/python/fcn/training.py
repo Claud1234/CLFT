@@ -30,9 +30,9 @@ import torchvision
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # parser.add_argument('data', metavar='DIR',
                     # help='path to dataset')
-parser.add_argument('-j', '--workers', default=32, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
                     help='number of data loading workers (default: 32)')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
+parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--epochs_cotrain', default=300, type=int, metavar='N',
                     help='number of total epochs to run')
@@ -40,7 +40,7 @@ parser.add_argument('--n_classes', default=4, type=int, metavar='N',
                     help='number of classes')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=64, type=int,
+parser.add_argument('-b', '--batch-size', default=8, type=int,
                     metavar='N',
                     help='mini-batch size (default: 256), this is the total '
                          'batch size of all GPUs on the current node when '
@@ -69,7 +69,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 
-logdir ='/home/claude/Data/logs/1st_test/'
+logdir ='/home/claude/Data/logs/2nd_test/'
 if not os.path.exists(logdir):
     os.makedirs(logdir)
     
@@ -200,12 +200,12 @@ def main_worker(gpu, ngpus_per_node, args):
         drop_last=True)
     
     '''
-    #### RESUME
+    #### Resume and Evalutation
     '''
-    loc = 'cuda:{}'.format(args.gpu)
+    # loc = 'cuda:{}'.format(args.gpu)
     cpu_loc = 'cpu'
     checkpoint = torch.load(
-         '/home/claude/Data/logs/1st_test/checkpoint_0099.pth.tar', 
+         '/home/claude/Data/logs/1st_test/checkpoint_0019.pth.tar', 
                                                         map_location=cpu_loc)
     model.load_state_dict(checkpoint['state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer'])
@@ -287,15 +287,6 @@ def train(train_loader, model, criterion, optimizer, args):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
-        # # with torch.no_grad():
-        # print ('sssss')
-        # model.eval()
-        # output = model(batch['rgb'],batch['lidar'],'fusion')
-        # annotation_teacher = F.softmax(output['fusion'],1)
-        # _, annotation_teacher = torch.max(annotation_teacher,1)
-        # mask_not_valid = batch['annotation'] == 3
-        # annotation_teacher[mask_not_valid] = 3
 
 def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
     lambda_cot = 1
@@ -363,16 +354,15 @@ def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
 
 def evaluation(train_loader, model, criterion, optimizer, args):
     model.eval()
-    print('sss')
-    print (model)
+    print('evaluation')
     for batch in train_loader:
-        print ('aaa')     
+        print ('i am here')     
         output = model(batch['rgb'],batch['lidar'],'fusion')
         annotation_teacher = F.softmax(output['fusion'], 1)
         _, annotation_teacher = torch.max(annotation_teacher, 1)
         mask_not_valid = batch['annotation'] == 3
         annotation_teacher[mask_not_valid] = 3
-        print(output)
+        print(annotation_teacher)
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)

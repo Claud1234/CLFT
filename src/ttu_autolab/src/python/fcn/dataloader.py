@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-import torchvision
+import torchvision.transforms as transforms
+import torchvision.transforms.functional as TF
 import os
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
@@ -62,7 +63,7 @@ class Dataset():
 
         return points_set, camera_coord
 
-    def crop_pointcloud(self,points_set_or,camera_coord_or,i,j,h,w):
+    def crop_pointcloud(self, points_set_or, camera_coord_or, i, j, h, w):
         points_set = np.copy(points_set_or)
         camera_coord = np.copy(camera_coord_or)
         
@@ -77,9 +78,9 @@ class Dataset():
         return points_set, camera_coord, selected
 
     def get_lid_images(self, h, w, points_set, camera_coord):
-        X = np.zeros((self.crop_size,self.crop_size))
-        Y = np.zeros((self.crop_size,self.crop_size))
-        Z = np.zeros((self.crop_size,self.crop_size))
+        X = np.zeros((self.crop_size, self.crop_size))
+        Y = np.zeros((self.crop_size, self.crop_size))
+        Z = np.zeros((self.crop_size, self.crop_size))
 
         rows = np.floor(camera_coord[:,1]*self.crop_size/h)
         cols = np.floor(camera_coord[:,0]*self.crop_size/w)
@@ -88,9 +89,9 @@ class Dataset():
         Y[(rows.astype(int),cols.astype(int))] = points_set[:,1]
         Z[(rows.astype(int),cols.astype(int))] = points_set[:,2]
 
-        X = torchvision.transforms.functional.to_pil_image(X.astype(np.float32))
-        Y = torchvision.transforms.functional.to_pil_image(Y.astype(np.float32))
-        Z = torchvision.transforms.functional.to_pil_image(Z.astype(np.float32))
+        X = TF.to_pil_image(X.astype(np.float32))
+        Y = TF.to_pil_image(Y.astype(np.float32))
+        Z = TF.to_pil_image(Z.astype(np.float32))
 
         return X, Y, Z
 
@@ -106,9 +107,9 @@ class Dataset():
         Y[(rows.astype(int),cols.astype(int))] = points_set[:,1]
         Z[(rows.astype(int),cols.astype(int))] = points_set[:,2]
 
-        X = torchvision.transforms.functional.to_pil_image(X.astype(np.float32))
-        Y = torchvision.transforms.functional.to_pil_image(Y.astype(np.float32))
-        Z = torchvision.transforms.functional.to_pil_image(Z.astype(np.float32))
+        X = TF.to_pil_image(X.astype(np.float32))
+        Y = TF.to_pil_image(Y.astype(np.float32))
+        Z = TF.to_pil_image(Z.astype(np.float32))
 
         return X, Y, Z
 
@@ -125,7 +126,7 @@ class Dataset():
         annotation[mask_cyclist] = 2
         annotation[mask_ignore] = 3
 
-        return torchvision.transforms.functional.to_pil_image(annotation)
+        return TF.to_pil_image(annotation)
         
     def __getitem__(self, idx):
         # cam_path = os.path.join(self.dataroot, 'scale_' + str(self.factor), 
@@ -152,57 +153,58 @@ class Dataset():
         # Crop top part
         w, h = rgb.size
         delta = int(h/2)    
-        rgb = torchvision.transforms.functional.crop(rgb, delta, 0, h-delta, w)
-        annotation = torchvision.transforms.functional.crop(annotation, 
-                                                            delta, 0, 
-                                                            h-delta, w)
+        rgb = TF.crop(rgb, delta, 0, h-delta, w)
+        annotation = TF.crop(annotation, delta, 0, h-delta, w)
         points_set, camera_coord, _ = self.crop_pointcloud(points_set,
                                                            camera_coord,
-                                                           delta,0,h-delta,w)
+                                                           delta, 0, h-delta, w)
 
-        if self.split == 'as1' or self.split == 'as1':   
-            print ('aaa')
-            # Square crop
+        if self.split == '1' or self.split == '1':   
+            '''
+            #### Square crop
+            '''
             w, h = rgb.size    
-            i0, j0, h0, w0 = torchvision.transforms.RandomCrop.get_params(
-                                                                    rgb, (h,h))        
-            rgb = torchvision.transforms.functional.crop(rgb, i0, j0, h0, w0)
-            annotation = torchvision.transforms.functional.crop(annotation, 
-                                                                i0, j0, h0, w0)
+            i0, j0, h0, w0 = transforms.RandomCrop.get_params(rgb, (h,h))        
+            rgb = TF.crop(rgb, i0, j0, h0, w0)
+            annotation = TF.crop(annotation, i0, j0, h0, w0)
             points_set, camera_coord, _ = self.crop_pointcloud(points_set, 
                                                                camera_coord,
-                                                               i0,j0,h0,w0)
+                                                               i0, j0, h0, w0)
+            X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord)
+            
+            '''
+            #### Random cropping
+            '''
+            # i, j, h, w = transforms.RandomResizedCrop.get_params(
+                                # rgb, scale=(0.2, 1.), ratio=(3. / 4., 4. / 3.))
+            # rgb = TF.resized_crop(
+                # rgb, i, j, h, w, (self.crop_size, self.crop_size), 
+                # Image.BILINEAR)
+            # annotation = TF.resized_crop(
+                # annotation, i, j, h, w, (self.crop_size,self.crop_size), 
+                # Image.NEAREST)
+            # points_set, camera_coord, _ = self.crop_pointcloud(
+                # points_set, camera_coord, i, j, h, w)
+            # X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord)        
 
-            # Random cropping
-            i, j, h, w = torchvision.transforms.RandomResizedCrop.get_params(
-                                rgb, scale=(0.2, 1.), ratio=(3. / 4., 4. / 3.))
-            rgb = torchvision.transforms.functional.resized_crop(
-                rgb, i, j, h, w, (self.crop_size,self.crop_size), Image.BILINEAR)
-            annotation = torchvision.transforms.functional.resized_crop(
-                annotation, i, j, h, w, (self.crop_size,self.crop_size), 
-                Image.NEAREST)
-            points_set, camera_coord, _ = self.crop_pointcloud(
-                points_set, camera_coord,i,j,h,w)
-            X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord)        
-
-            # Random rotation
-            if random.random() > 0.5 and self.rot_augment:
-                angle = -self.rot_range + 2*self.rot_range*torch.rand(1)[0]
-                rgb = torchvision.transforms.functional.affine(
-                    rgb, angle, (0,0), 1, 0, 
-                    resample=Image.BILINEAR, fillcolor=0)                        
-                annotation = torchvision.transforms.functional.affine(
-                    annotation, angle, (0,0), 1, 0, 
-                    resample=Image.NEAREST, fillcolor=0)                        
-                X = torchvision.transforms.functional.affine(
-                    X, angle, (0,0), 1, 0, resample=Image.NEAREST, fillcolor=0)                        
-                Y = torchvision.transforms.functional.affine(
-                    Y, angle, (0,0), 1, 0, resample=Image.NEAREST, fillcolor=0)                        
-                Z = torchvision.transforms.functional.affine(
-                    Z, angle, (0,0), 1, 0, resample=Image.NEAREST, fillcolor=0)
+            '''
+            #### Random rotation
+            '''
+            # if random.random() > 0.5 and self.rot_augment:
+                # angle = -self.rot_range + 2*self.rot_range*torch.rand(1)[0]
+                # rgb = TF.affine(rgb, angle, (0,0), 1, 0, 
+                                # interpolation=Image.BILINEAR, fill=0)                        
+                # annotation = TF.affine(annotation, angle, (0,0), 1, 0, 
+                    # interpolation=Image.NEAREST, fill=0)                        
+                # X = TF.affine(
+                    # X, angle, (0,0), 1, 0, interpolation=Image.NEAREST, fill=0)                        
+                # Y = TF.affine(
+                    # Y, angle, (0,0), 1, 0, interpolation=Image.NEAREST, fill=0)                        
+                # Z = TF.affine(
+                    # Z, angle, (0,0), 1, 0, interpolation=Image.NEAREST, fill=0)
 
             # Random color jittering
-            rgb_copy = to_tensor(rgb.copy())[0:3]
+            rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
             rgb = self.normalize(to_tensor(self.colorjitter(rgb))[0:3])#only rgb
                         
         else:
@@ -219,5 +221,5 @@ class Dataset():
     
         return {'rgb':rgb, 'rgb_orig':rgb_copy, 'lidar':lid_images, 
                 'annotation':annotation}
-    
-    
+    plt.imshow(rgb)
+    plt.show()    

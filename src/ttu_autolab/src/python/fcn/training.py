@@ -30,9 +30,9 @@ import torchvision
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # parser.add_argument('data', metavar='DIR',
                     # help='path to dataset')
-parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 32)')
-parser.add_argument('--epochs', default=20, type=int, metavar='N',
+parser.add_argument('--epochs', default=10, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--epochs_cotrain', default=300, type=int, metavar='N',
                     help='number of total epochs to run')
@@ -69,7 +69,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 
-logdir ='/home/claude/Data/logs/2nd_test/'
+logdir ='/home/claude/Data/logs/3rd_test/'
 if not os.path.exists(logdir):
     os.makedirs(logdir)
     
@@ -162,12 +162,12 @@ def main_worker(gpu, ngpus_per_node, args):
 
     cudnn.benchmark = True
     save_epoch = 10
-    train_dataset = Dataset(split='1', 
+    train_dataset = Dataset(split='2', 
                             dataroot='/home/claude/Data/mauro_waymo', 
                             rot_augment=True, rot_range=20, 
                             factor=4, crop_size=128)
     
-    semi_dataset = Dataset(split='1', 
+    semi_dataset = Dataset(split='2', 
                            dataroot='/home/claude/Data/mauro_waymo', 
                            rot_augment=True, rot_range=20, 
                            factor=4, crop_size=128)
@@ -203,38 +203,40 @@ def main_worker(gpu, ngpus_per_node, args):
     #### Resume and Evalutation
     '''
     # loc = 'cuda:{}'.format(args.gpu)
-    cpu_loc = 'cpu'
-    checkpoint = torch.load(
-         '/home/claude/Data/logs/1st_test/checkpoint_0019.pth.tar', 
-                                                        map_location=cpu_loc)
-    model.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    evaluation(train_loader, model, criterion, optimizer, args)
-    
+    # cpu_loc = 'cpu'
+    # print (model)
+    # checkpoint = torch.load(
+         # '/home/claude/Data/logs/2nd_test/checkpoint_0009.pth.tar', 
+                                                        # map_location=cpu_loc)
+    # model.load_state_dict(checkpoint['state_dict'])
+    # optimizer.load_state_dict(checkpoint['optimizer'])
+    # evaluation(train_loader, model, criterion, optimizer, args)
+    #
     # del checkpoint
     # #torch.cuda.empty_cache()
     
     '''
     #### Super 
     '''
-    # for epoch in range(args.start_epoch, args.epochs):
-        # if args.distributed:
-            # train_sampler.set_epoch(epoch)
-            # semi_sampler.set_epoch(epoch)
-            #
-        # curr_lr = adjust_learning_rate(optimizer, epoch, args.epochs, args)
-        # # train for one epoch
-        # train(train_loader, model, criterion, optimizer, args)       
-        # print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, curr_lr))
-        # if (epoch+1) % save_epoch == 0 and epoch > 0:
-            # if not args.multiprocessing_distributed or \
-            # (args.multiprocessing_distributed and args.rank%ngpus_per_node == 0):
-                # save_checkpoint({'epoch': epoch + 1,
-                                 # 'state_dict': model.state_dict(),
-                                 # 'optimizer' : optimizer.state_dict(),
-                                 # }, is_best=False, 
-                                # filename=logdir + \
-                                # 'checkpoint_{:04d}.pth.tar'.format(epoch))
+    for epoch in range(args.start_epoch, args.epochs):
+        if args.distributed:
+            train_sampler.set_epoch(epoch)
+            semi_sampler.set_epoch(epoch)
+            
+        curr_lr = adjust_learning_rate(optimizer, epoch, args.epochs, args)
+        # train for one epoch
+        train(train_loader, model, criterion, optimizer, args)       
+        print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, curr_lr))
+        if (epoch+1) % save_epoch == 0 and epoch > 0:
+            if not args.multiprocessing_distributed or \
+            (args.multiprocessing_distributed and args.rank%ngpus_per_node == 0):
+                save_checkpoint({'epoch': epoch + 1,
+                                 'model_state_dict': model.state_dict(),
+                                 'optimizer_state_dict': optimizer.state_dict(),
+                                 }, is_best=False, 
+                                filename=logdir + \
+                                'checkpoint_{:04d}.pth'.format(epoch))
+
 
     '''
     #### Co-training
@@ -352,19 +354,33 @@ def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
         loss_unsuper.backward()
         optimizer.step()
 
-def evaluation(train_loader, model, criterion, optimizer, args):
+def evaluation(train_dataset, model, criterion, optimizer, args):
     model.eval()
     print('evaluation')
-    for batch in train_loader:
-        print ('i am here')     
-        output = model(batch['rgb'],batch['lidar'],'fusion')
-        annotation_teacher = F.softmax(output['fusion'], 1)
-        _, annotation_teacher = torch.max(annotation_teacher, 1)
-        mask_not_valid = batch['annotation'] == 3
-        annotation_teacher[mask_not_valid] = 3
-        print(annotation_teacher)
+    with torch.no_grad():  
+        for batch in train_dataset:        
+            output = model(batch['rgb'],batch['lidar'],'ind')
+        # annotation_teacher = F.softmax(output['fusion'], 1)
+        # _, annotation_teacher = torch.max(annotation_teacher, 1)
+        # mask_not_valid = batch['annotation'] == 3
+        # annotation_teacher[mask_not_valid] = 3
+        #print('output:', output)
+        #print(output['rgb'].shape)
+        # create a color pallette, selecting a color for each class
+        # from PIL import Image
+        # palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
+        # colors = torch.as_tensor([i for i in range(21)])[:, None] * palette
+        # colors = (colors % 255).numpy().astype("uint8")
+        #
+        # # plot the semantic segmentation predictions of 21 classes in each color
+        # r = Image.fromarray(output['rgb'].byte().cpu().numpy()).resize(rgb.size)
+        # r.putpalette(colors)
+        #
+        # import matplotlib.pyplot as plt
+        # plt.imshow(r)
+        # plt.show()
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='checkpoint.pth'):
     torch.save(state, filename)
 
 def adjust_learning_rate(optimizer, epoch, epoch_max, args):

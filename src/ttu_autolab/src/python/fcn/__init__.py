@@ -4,6 +4,4 @@
 Contains Python scripts of fully convolutional NN for lidar camera fusion.
 
 Created on April 13, 2021
-
-@author: TTU Autolab group
 '''

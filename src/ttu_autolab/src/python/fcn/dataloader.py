@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torchvision
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 import os
@@ -30,10 +31,10 @@ class Dataset():
         ##functions for data augmentation and normalization
         self.mean_lidar = np.array([-0.17263354, 0.85321806, 24.5527253])
         self.std_lidar = np.array([7.34546552, 1.17227659, 15.83745082])
-        self.normalize = torchvision.transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.colorjitter =  torchvision.transforms.ColorJitter(
-            brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
+        self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                              std=[0.229, 0.224, 0.225])
+        self.colorjitter = transforms.ColorJitter(brightness=0.4, contrast=0.4, 
+                                                  saturation=0.4, hue=0.1)
         #####################################################################
 
     def __len__(self):
@@ -71,10 +72,12 @@ class Dataset():
         camera_coord[:,0] -= j
         selected_i = np.logical_and(camera_coord[:,1] >=0, camera_coord[:,1] < h) 
         selected_j = np.logical_and(camera_coord[:,0] >=0, camera_coord[:,0] < w) 
-        selected = np.logical_and(selected_i,selected_j)
+        selected = np.logical_and(selected_i, selected_j)
+        #print (selected)
         points_set = points_set[selected,:]
         camera_coord = camera_coord[selected,:]
-
+        #print ('points_set', points_set.shape)
+        #print ('camera_coord', camera_coord.shape)
         return points_set, camera_coord, selected
 
     def get_lid_images(self, h, w, points_set, camera_coord):
@@ -151,41 +154,52 @@ class Dataset():
         assert(ann_name==lidar_name)
 
         # Crop top part
-        w, h = rgb.size
+        w, h = rgb.size  # original image's w and h
         delta = int(h/2)    
         rgb = TF.crop(rgb, delta, 0, h-delta, w)
         annotation = TF.crop(annotation, delta, 0, h-delta, w)
         points_set, camera_coord, _ = self.crop_pointcloud(points_set,
                                                            camera_coord,
                                                            delta, 0, h-delta, w)
-
-        if self.split == '1' or self.split == '1':   
+        # print ('pt_set_0:', points_set.shape)
+        # print ('cam_coord_0:', camera_coord.shape)
+        
+        if self.split == '1' or self.split == '2':   
             '''
             #### Square crop
             '''
-            w, h = rgb.size    
+            w, h = rgb.size # Top cropped image's w and h
+            #print ('sqaure crop:',(w,h))
             i0, j0, h0, w0 = transforms.RandomCrop.get_params(rgb, (h,h))        
             rgb = TF.crop(rgb, i0, j0, h0, w0)
             annotation = TF.crop(annotation, i0, j0, h0, w0)
             points_set, camera_coord, _ = self.crop_pointcloud(points_set, 
                                                                camera_coord,
                                                                i0, j0, h0, w0)
-            X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord)
+            # print ('pt_set:', points_set.shape)
+            # print ('cam_coor:', camera_coord.shape)
+            X,Y,Z = self.get_lid_images_val(h0, w0, points_set, camera_coord)
+            
+            rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
+            rgb = self.normalize(to_tensor(np.array(rgb))[0:3])
             
             '''
             #### Random cropping
             '''
-            # i, j, h, w = transforms.RandomResizedCrop.get_params(
+            # i1, j1, h1, w1 = transforms.RandomResizedCrop.get_params(
                                 # rgb, scale=(0.2, 1.), ratio=(3. / 4., 4. / 3.))
             # rgb = TF.resized_crop(
-                # rgb, i, j, h, w, (self.crop_size, self.crop_size), 
+                # rgb, i1, j1, h1, w1, (self.crop_size, self.crop_size), 
                 # Image.BILINEAR)
             # annotation = TF.resized_crop(
-                # annotation, i, j, h, w, (self.crop_size,self.crop_size), 
+                # annotation, i1, j1, h1, w1, (self.crop_size,self.crop_size), 
                 # Image.NEAREST)
             # points_set, camera_coord, _ = self.crop_pointcloud(
-                # points_set, camera_coord, i, j, h, w)
-            # X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord)        
+                # points_set, camera_coord, i1, j1, h1, w1)
+            # X,Y,Z = self.get_lid_images(h, w, points_set, camera_coord) 
+            #
+            # rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
+            # rgb = self.normalize(to_tensor(np.array(rgb))[0:3])       
 
             '''
             #### Random rotation
@@ -203,12 +217,15 @@ class Dataset():
                 # Z = TF.affine(
                     # Z, angle, (0,0), 1, 0, interpolation=Image.NEAREST, fill=0)
 
-            # Random color jittering
-            rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
-            rgb = self.normalize(to_tensor(self.colorjitter(rgb))[0:3])#only rgb
+            '''
+            #### Random color jittering
+            '''
+            # rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
+            # rgb = self.normalize(to_tensor(self.colorjitter(rgb))[0:3])#only rgb
                         
         else:
             w, h = rgb.size
+            #print ('no aug:',(w,h))
             X,Y,Z = self.get_lid_images_val(h, w, points_set, camera_coord)        
             rgb_copy = to_tensor(np.array(rgb.copy()))[0:3]
             rgb = self.normalize(to_tensor(np.array(rgb))[0:3])  #only rgb
@@ -220,6 +237,4 @@ class Dataset():
         annotation = to_tensor(np.array(annotation)).type(torch.LongTensor).squeeze(0)
     
         return {'rgb':rgb, 'rgb_orig':rgb_copy, 'lidar':lid_images, 
-                'annotation':annotation}
-    plt.imshow(rgb)
-    plt.show()    
+                'annotation':annotation}   

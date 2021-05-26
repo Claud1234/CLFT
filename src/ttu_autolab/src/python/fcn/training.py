@@ -8,9 +8,8 @@ import random
 import shutil
 import time
 import warnings
-from dataloader import Dataset
 import numpy as np
-from fusion_net import FusionNet
+
 
 import torch
 import torch.nn as nn
@@ -26,6 +25,10 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torch.nn.functional as F
 import torchvision
+
+import configs
+from dataloader import Dataset
+from fusion_net import FusionNet
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # parser.add_argument('data', metavar='DIR',
@@ -69,7 +72,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 
-logdir ='/home/claude/Data/logs/3rd_test/'
+logdir = configs.LOG_DIR
 if not os.path.exists(logdir):
     os.makedirs(logdir)
     
@@ -162,15 +165,11 @@ def main_worker(gpu, ngpus_per_node, args):
 
     cudnn.benchmark = True
     save_epoch = 10
-    train_dataset = Dataset(split='2', 
-                            dataroot='/home/claude/Data/mauro_waymo', 
-                            rot_augment=True, rot_range=20, 
-                            factor=4, crop_size=128)
+    train_dataset = Dataset(dataroot=configs.DATAROOT,
+                            split=configs.SPLITS, augment=configs.AUGMENT)
     
-    semi_dataset = Dataset(split='2', 
-                           dataroot='/home/claude/Data/mauro_waymo', 
-                           rot_augment=True, rot_range=20, 
-                           factor=4, crop_size=128)
+    semi_dataset = Dataset(dataroot=configs.DATAROOT,
+                           split=configs.SPLITS, augment=configs.AUGMENT)
     
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -183,18 +182,18 @@ def main_worker(gpu, ngpus_per_node, args):
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, 
-        batch_size=args.batch_size, 
+        batch_size=configs.BATCH_SIZE, 
         shuffle=(train_sampler is None),
-        num_workers=args.workers, 
+        num_workers=configs.WORKERS, 
         pin_memory=True, 
         sampler=train_sampler, 
         drop_last=True)
 
     semi_loader = torch.utils.data.DataLoader(
         semi_dataset, 
-        batch_size=args.batch_size, 
+        batch_size=configs.BATCH_SIZE, 
         shuffle=(semi_sampler is None),
-        num_workers=args.workers, 
+        num_workers=configs.WORKERS, 
         pin_memory=True, 
         sampler=semi_sampler, 
         drop_last=True)

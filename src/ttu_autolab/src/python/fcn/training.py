@@ -27,8 +27,8 @@ import torch.nn.functional as F
 import torchvision
 
 import configs
-from dataloader import Dataset
-from fusion_net import FusionNet
+from fcn.dataloader import Dataset
+from fcn.fusion_net import FusionNet
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # parser.add_argument('data', metavar='DIR', #help='path to dataset')
@@ -63,7 +63,7 @@ parser.add_argument('--dist-backend', default='nccl', type=str,
                     help='distributed backend')
 parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
-parser.add_argument('--gpu', default=None, type=int,
+parser.add_argument('--gpu', default=0, type=int,
                     help='GPU id to use.')
 parser.add_argument('--multiprocessing-distributed', action='store_true',
                     help='Use multi-processing distributed training to launch'
@@ -98,22 +98,27 @@ def main():
 
     args.distributed = args.world_size > 1 or args.multiprocessing_distributed
 
-    ngpus_per_node = torch.cuda.device_count()
+    ngpus_per_node = torch.cuda.device_count()  # 1
+    print(args.multiprocessing_distributed)
     if args.multiprocessing_distributed:
+
         # Since we have ngpus_per_node processes per node, the total world_size
         # needs to be adjusted accordingly
         args.world_size = ngpus_per_node * args.world_size
         # Use torch.multiprocessing.spawn to launch distributed processes: the
         # main_worker process function
+        print('multi')
         mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node,
                                                            args))
     else:
         # Simply call main_worker function
+        print('single')
         main_worker(args.gpu, ngpus_per_node, args)
 
 
 def main_worker(gpu, ngpus_per_node, args):
     args.gpu = gpu
+    print(args.gpu)
 
     # suppress printing if not master
     if args.multiprocessing_distributed and args.gpu != 0:
@@ -124,42 +129,45 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
 
-    if args.distributed:
-        if args.dist_url == "env://" and args.rank == -1:
-            args.rank = int(os.environ["RANK"])
-        if args.multiprocessing_distributed:
-            # For multiprocessing distributed training, rank needs to be the
-            # global rank among all the processes
-            args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(backend=args.dist_backend,
-                                init_method=args.dist_url,
-                                world_size=args.world_size, rank=args.rank)
+#     if args.distributed:
+#         print(args.distributed)
+#         print('dist_url', args.dist_url)
+#         if args.dist_url == "env://" and args.rank == -1:
+#             args.rank = int(os.environ["RANK"])
+#         if args.multiprocessing_distributed:
+#             # For multiprocessing distributed training, rank needs to be the
+#             # global rank among all the processes
+#             args.rank = args.rank * ngpus_per_node + gpu
+#         dist.init_process_group(backend=args.dist_backend,
+#                                 init_method=args.dist_url,
+#                                 world_size=args.world_size, rank=args.rank)
     # create model
     model = FusionNet()
 
-    if args.distributed:
+#     if args.distributed:
+#         print('distributed', args.distributed)
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
-        if args.gpu is not None:
-            torch.cuda.set_device(args.gpu)
-            model.cuda(args.gpu)
-            # When using a single GPU per process and per
-            # DistributedDataParallel, we need to divide the batch size
-            # ourselves based on the total number of GPUs we have
-            args.batch_size = int(args.batch_size / ngpus_per_node)
-            args.workers = int((args.workers + ngpus_per_node - 1) /
-                               ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[args.gpu], find_unused_parameters=True)
+    if args.gpu is not None:
+        torch.cuda.set_device(args.gpu)
+        model.cuda(args.gpu)
+        # When using a single GPU per process and per
+        # DistributedDataParallel, we need to divide the batch size
+        # ourselves based on the total number of GPUs we have
+#         args.batch_size = int(args.batch_size / ngpus_per_node)
+#         args.workers = int((args.workers + ngpus_per_node - 1) /
+#                            ngpus_per_node)
+#         model = torch.nn.parallel.DistributedDataParallel(
+#             model, device_ids=[args.gpu], find_unused_parameters=True)
 
     # define loss function (criterion) and optimizer
     weight_loss = torch.Tensor(args.n_classes).fill_(0)
     weight_loss[0] = 1
     weight_loss[1] = 3
     weight_loss[2] = 10
-    # criterion = nn.CrossEntropyLoss(weight=weight_loss).cuda(args.gpu)
-    criterion = nn.CrossEntropyLoss(weight=weight_loss)
+    criterion = nn.CrossEntropyLoss(weight=weight_loss).cuda(args.gpu)
+    # criterion = nn.CrossEntropyLoss(weight=weight_loss)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
                                  betas=(0.9, 0.999))
 
@@ -274,8 +282,8 @@ def train(train_loader, model, criterion, optimizer, args):
         if args.gpu is not None:
             batch['rgb'] = batch['rgb'].cuda(args.gpu, non_blocking=True)
             batch['lidar'] = batch['lidar'].cuda(args.gpu, non_blocking=True)
-            batch['annotation'] = batch['annotation'].cuda(
-                args.gpu, non_blocking=True).squeeze(1)
+            batch['annotation'] = \
+                batch['annotation'].cuda(args.gpu, non_blocking=True).squeeze(1)
 
         # compute output
         output = model(batch['rgb'], batch['lidar'], 'all')

@@ -23,13 +23,13 @@ model = FusionNet()
 # model = model
 # checkpoint loading
 checkpoint = torch.load(
-    '/home/claude/Data/logs/3rd_test/checkpoint_0009.pth')
+    '/home/claude/Data/logs/4th_gpu_test/checkpoint_0009.pth')
 # trained weights loading
 model.load_state_dict(checkpoint['model_state_dict'])
 # optimizer loading
 # optimizer.load_state_dict(checkpoint['optimizer'])
 # load the model to CPU
-model.eval().to('cpu')
+model.eval().to('cuda')
 
 # Image operations
 image = Image.open('/home/claude/1.png').convert('RGB')
@@ -38,7 +38,7 @@ delta = int(h/2)
 image = TF.crop(image, delta, 0, h-delta, w)
 orig_image = np.array(image.copy())
 image = np.array(image)
-image = transform(image).to('cpu')
+image = transform(image).to('cuda')
 image = image.unsqueeze(0)  # add a batch dimension
 
 
@@ -51,6 +51,7 @@ X = TF.to_tensor(np.array(X))
 Y = TF.to_tensor(np.array(Y))
 Z = TF.to_tensor(np.array(Z))
 lidar_image = torch.cat((X, Y, Z), 0)
+lidar_image = lidar_image.to('cuda')
 lidar_image = lidar_image.unsqueeze(0)  # add a batch dimension
 # forward pass through the model
 # outputs = model(image, None, 'rgb')

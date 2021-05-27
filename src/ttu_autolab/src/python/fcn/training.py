@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import argparse
 import builtins
@@ -31,8 +31,7 @@ from dataloader import Dataset
 from fusion_net import FusionNet
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-# parser.add_argument('data', metavar='DIR',
-                    # help='path to dataset')
+# parser.add_argument('data', metavar='DIR', #help='path to dataset')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 32)')
 parser.add_argument('--epochs', default=10, type=int, metavar='N',
@@ -67,15 +66,16 @@ parser.add_argument('--seed', default=None, type=int,
 parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
 parser.add_argument('--multiprocessing-distributed', action='store_true',
-                    help='Use multi-processing distributed training to launch '
-                         'N processes per node, which has N GPUs. This is the '
-                         'fastest way to use PyTorch for either single node or '
+                    help='Use multi-processing distributed training to launch'
+                         'N processes per node, which has N GPUs. This is the'
+                         'fastest way to use PyTorch for either single node or'
                          'multi node data parallel training')
 
 logdir = configs.LOG_DIR
 if not os.path.exists(logdir):
     os.makedirs(logdir)
-    
+
+
 def main():
     args = parser.parse_args()
 
@@ -105,7 +105,7 @@ def main():
         args.world_size = ngpus_per_node * args.world_size
         # Use torch.multiprocessing.spawn to launch distributed processes: the
         # main_worker process function
-        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, 
+        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node,
                                                            args))
     else:
         # Simply call main_worker function
@@ -131,7 +131,7 @@ def main_worker(gpu, ngpus_per_node, args):
             # For multiprocessing distributed training, rank needs to be the
             # global rank among all the processes
             args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(backend=args.dist_backend, 
+        dist.init_process_group(backend=args.dist_backend,
                                 init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
@@ -148,29 +148,29 @@ def main_worker(gpu, ngpus_per_node, args):
             # DistributedDataParallel, we need to divide the batch size
             # ourselves based on the total number of GPUs we have
             args.batch_size = int(args.batch_size / ngpus_per_node)
-            args.workers = int((args.workers + ngpus_per_node - 1) / 
+            args.workers = int((args.workers + ngpus_per_node - 1) /
                                ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[args.gpu],find_unused_parameters=True)
+                model, device_ids=[args.gpu], find_unused_parameters=True)
 
     # define loss function (criterion) and optimizer
-    weight_loss = torch.Tensor(args.n_classes).fill_(0) 
-    weight_loss[0] = 1 
-    weight_loss[1] = 3 
+    weight_loss = torch.Tensor(args.n_classes).fill_(0)
+    weight_loss[0] = 1
+    weight_loss[1] = 3
     weight_loss[2] = 10
     # criterion = nn.CrossEntropyLoss(weight=weight_loss).cuda(args.gpu)
     criterion = nn.CrossEntropyLoss(weight=weight_loss)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, 
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
                                  betas=(0.9, 0.999))
 
     cudnn.benchmark = True
     save_epoch = 10
     train_dataset = Dataset(dataroot=configs.DATAROOT,
                             split=configs.SPLITS, augment=configs.AUGMENT)
-    
+
     semi_dataset = Dataset(dataroot=configs.DATAROOT,
                            split=configs.SPLITS, augment=configs.AUGMENT)
-    
+
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(
                                                                 train_dataset)
@@ -181,23 +181,23 @@ def main_worker(gpu, ngpus_per_node, args):
         semi_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, 
-        batch_size=configs.BATCH_SIZE, 
+        train_dataset,
+        batch_size=configs.BATCH_SIZE,
         shuffle=(train_sampler is None),
-        num_workers=configs.WORKERS, 
-        pin_memory=True, 
-        sampler=train_sampler, 
+        num_workers=configs.WORKERS,
+        pin_memory=True,
+        sampler=train_sampler,
         drop_last=True)
 
     semi_loader = torch.utils.data.DataLoader(
-        semi_dataset, 
-        batch_size=configs.BATCH_SIZE, 
+        semi_dataset,
+        batch_size=configs.BATCH_SIZE,
         shuffle=(semi_sampler is None),
-        num_workers=configs.WORKERS, 
-        pin_memory=True, 
-        sampler=semi_sampler, 
+        num_workers=configs.WORKERS,
+        pin_memory=True,
+        sampler=semi_sampler,
         drop_last=True)
-    
+
     '''
     #### Resume and Evalutation
     '''
@@ -213,29 +213,29 @@ def main_worker(gpu, ngpus_per_node, args):
     #
     # del checkpoint
     # #torch.cuda.empty_cache()
-    
+
     '''
-    #### Super 
+    #### Super
     '''
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
             semi_sampler.set_epoch(epoch)
-            
+
         curr_lr = adjust_learning_rate(optimizer, epoch, args.epochs, args)
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, args)       
+        train(train_loader, model, criterion, optimizer, args)
         print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, curr_lr))
         if (epoch+1) % save_epoch == 0 and epoch > 0:
             if not args.multiprocessing_distributed or \
-            (args.multiprocessing_distributed and args.rank%ngpus_per_node == 0):
-                save_checkpoint({'epoch': epoch + 1,
-                                 'model_state_dict': model.state_dict(),
-                                 'optimizer_state_dict': optimizer.state_dict(),
-                                 }, is_best=False, 
-                                filename=logdir + \
-                                'checkpoint_{:04d}.pth'.format(epoch))
-
+                (args.multiprocessing_distributed and
+                 args.rank % ngpus_per_node == 0):
+                save_checkpoint(
+                    {'epoch': epoch + 1,
+                     'model_state_dict': model.state_dict(),
+                     'optimizer_state_dict': optimizer.state_dict(), },
+                    is_best=False,
+                    filename=logdir + 'checkpoint_{:04d}.pth'.format(epoch))
 
     '''
     #### Co-training
@@ -263,9 +263,10 @@ def main_worker(gpu, ngpus_per_node, args):
                     # filename=logdir+'checkpoint_cotrain_{:04d}.pth.tar'.format(
                                                                         # epoch))
 
+
 def train(train_loader, model, criterion, optimizer, args):
     # switch to train mode
-    print ('full _train')
+    print('full _train')
     model.train()
 
     for batch in train_loader:
@@ -277,7 +278,7 @@ def train(train_loader, model, criterion, optimizer, args):
                 args.gpu, non_blocking=True).squeeze(1)
 
         # compute output
-        output = model(batch['rgb'], batch['lidar'],'all')
+        output = model(batch['rgb'], batch['lidar'], 'all')
 
         loss_rgb = criterion(output['rgb'], batch['annotation'])
         loss_lidar = criterion(output['lidar'], batch['annotation'])
@@ -289,9 +290,10 @@ def train(train_loader, model, criterion, optimizer, args):
         loss.backward()
         optimizer.step()
 
+
 def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
     lambda_cot = 1
-    print ('semi_train')
+    print('semi_train')
     model.train()
     for batch in train_loader:
         # measure data loading time
@@ -301,13 +303,12 @@ def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
             batch['annotation'] = batch['annotation'].cuda(
                                         args.gpu, non_blocking=True).squeeze(1)
 
-        output = model(batch['rgb'], batch['lidar'],'all')
+        output = model(batch['rgb'], batch['lidar'], 'all')
 
         loss_rgb = criterion(output['rgb'], batch['annotation'])
         loss_lidar = criterion(output['lidar'], batch['annotation'])
         loss_fusion = criterion(output['fusion'], batch['annotation'])
         loss = loss_rgb + loss_lidar + loss_fusion
-        
 
         optimizer.zero_grad()
         loss.backward()
@@ -328,17 +329,17 @@ def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
 
         with torch.no_grad():
             model.eval()
-            output = model(batch['rgb'],batch['lidar'],'fusion')
-            annotation_teacher = F.softmax(output['fusion'],1)
-            _, annotation_teacher = torch.max(annotation_teacher,1)
+            output = model(batch['rgb'], batch['lidar'], 'fusion')
+            annotation_teacher = F.softmax(output['fusion'], 1)
+            _, annotation_teacher = torch.max(annotation_teacher, 1)
             mask_not_valid = batch['annotation'] == 3
             annotation_teacher[mask_not_valid] = 3
 
         model.train()
-        output = model(batch['rgb'],batch['lidar'],'ind')
-        loss_rgb = lambda_cot*criterion(output['rgb'], 
+        output = model(batch['rgb'], batch['lidar'], 'ind')
+        loss_rgb = lambda_cot*criterion(output['rgb'],
                                         annotation_teacher.detach().clone())
-        loss_lidar = lambda_cot*criterion(output['lidar'], 
+        loss_lidar = lambda_cot*criterion(output['lidar'],
                                           annotation_teacher.detach().clone())
         loss_unsuper = loss_rgb + loss_lidar
 
@@ -353,12 +354,13 @@ def train_semi(train_loader, semi_loader, model, criterion, optimizer, args):
         loss_unsuper.backward()
         optimizer.step()
 
+
 def evaluation(train_dataset, model, criterion, optimizer, args):
     model.eval()
     print('evaluation')
-    with torch.no_grad():  
-        for batch in train_dataset:        
-            output = model(batch['rgb'],batch['lidar'],'ind')
+    with torch.no_grad():
+        for batch in train_dataset:
+            output = model(batch['rgb'], batch['lidar'], 'ind')
         # annotation_teacher = F.softmax(output['fusion'], 1)
         # _, annotation_teacher = torch.max(annotation_teacher, 1)
         # mask_not_valid = batch['annotation'] == 3
@@ -379,17 +381,20 @@ def evaluation(train_dataset, model, criterion, optimizer, args):
         # plt.imshow(r)
         # plt.show()
 
+
 def save_checkpoint(state, is_best, filename='checkpoint.pth'):
     torch.save(state, filename)
+
 
 def adjust_learning_rate(optimizer, epoch, epoch_max, args):
     """Decay the learning rate based on schedule"""
     lr = args.lr * (1 - epoch/epoch_max)**0.9
-    
+
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
     return lr
+
 
 def adjust_learning_rate_semi(optimizer, epoch, epoch_max, args):
     mid_epoch = epoch_max/2
@@ -397,11 +402,12 @@ def adjust_learning_rate_semi(optimizer, epoch, epoch_max, args):
         lr = np.exp(-(1-epoch/mid_epoch)**2)*args.lrsemi
     else:
         lr = args.lrsemi * (1 - epoch/epoch_max)**0.9
-    
+
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
     return lr
+
 
 if __name__ == '__main__':
     main()

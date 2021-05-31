@@ -24,6 +24,8 @@ model = FusionNet()
 # checkpoint loading
 checkpoint = torch.load(
     '/home/claude/Data/logs/4th_gpu_test/checkpoint_0009.pth')
+epoch = checkpoint['epoch']
+print('sss:', epoch)
 # trained weights loading
 model.load_state_dict(checkpoint['model_state_dict'])
 # optimizer loading

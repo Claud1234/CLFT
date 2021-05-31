@@ -27,13 +27,15 @@ IMAGE_CONTRAST = 0.4
 IMAGE_SATURATION = 0.4
 IMAGE_HUE = 0.1
 
-WORKERS = 12  # number of data loading workers(CPU threads)
-GPU = None
-EPOCHS = 10  # number of total epochs to run
+DEVICE = 'cuda:0'  # 'cpu' for CPU training. Default ID for GPU is :0
+WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 8  # batch size
+EPOCHS = 10  # number of total epochs to run
+SAVE_EPOCH = 10  # save the checkpoint after this mount of epochs
+
 EPOCHS_COTRAIN = 300  # number of total epochs to run
 CLASS_TOTAL = 4  # number of classes
-LR = 0.0003  # 'initial learning rate', dest='lr')
+LR = 0.0001  # initial learning rate)
 LR_SEMI = 0.00005
 
 LOG_DIR = '/home/claude/Data/logs/4th_gpu_test/'

@@ -7,7 +7,7 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
-SPLITS = 'training_0'  # .txt file name
+SPLITS = '1'  # .txt file name
 
 AUGMENT = 'square_crop'  # 'random_crop' 'random_rotate' 'random_colour_jiter'
 

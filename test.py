@@ -56,7 +56,7 @@ lidar_image = lidar_image.unsqueeze(0)  # add a batch dimension
 # forward pass through the model
 # outputs = model(image, None, 'rgb')
 outputs = model(image, lidar_image, 'ind')
-outputs = outputs['lidar']
+outputs = outputs['rgb']
 # get the segmentation map
 segmented_image = draw_test_segmentation_map(outputs)
 # image overlay

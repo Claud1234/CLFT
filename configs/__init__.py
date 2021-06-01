@@ -7,6 +7,7 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
+LOG_DIR = '/home/claude/Data/logs/4th_gpu_test/'  # Path to save checkpoints
 SPLITS = '1'  # .txt file name
 
 AUGMENT = 'square_crop'  # 'random_crop' 'random_rotate' 'random_colour_jiter'
@@ -38,7 +39,6 @@ CLASS_TOTAL = 4  # number of classes
 LR = 0.0001  # initial learning rate)
 LR_SEMI = 0.00005
 
-LOG_DIR = '/home/claude/Data/logs/4th_gpu_test/'
 
-TEST_IMAGE = '/home/claude/1.png'
-TEST_LIDAR = '/home/claude/2.pkl'
+TEST_IMAGE = './test_images/test_img.png'
+TEST_LIDAR = './test_images/test_lidar.pkl'

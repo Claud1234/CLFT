@@ -69,7 +69,7 @@ train_loader = DataLoader(train_dataset,
 for epoch in range(finsihed_epochs, configs.EPOCHS):
     curr_lr = adjust_learning_rate(optimizer, epoch, configs.EPOCHS)
     model.train()
-    print('Training')
+    print('Training...')
     print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, curr_lr))
     batches_amount = int(len(train_dataset)/configs.BATCH_SIZE)
     progress_bar = tqdm(train_loader, total=batches_amount)

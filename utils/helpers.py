@@ -15,16 +15,17 @@ if not os.path.exists(logdir):
     os.makedirs(logdir)
 
 label_colors_list = [
-        (255, 0, 0),  # animal
-        (0, 255, 0),  # archway
-        (0, 0, 255)]  # bicyclist]
+        (255, 0, 0),  # ignore
+        (0, 255, 0),  # vehicle
+        (0, 0, 255),
+        (255, 255, 0)]  # human]
 
 # all the classes that are present in the dataset
-ALL_CLASSES = ['sign', 'bicyclist', 'background']
+ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
 
 """
 This (`class_values`) assigns a specific class label to each of the classes.
-For example, `animal=0`, `archway=1`, and so on.
+For example, `vehicle=0`, `human=1`, and so on.
 """
 class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
@@ -60,9 +61,9 @@ def draw_test_segmentation_map(outputs):
     for label_num in range(0, len(label_colors_list)):
         if label_num in class_values:
             idx = labels == label_num
-            red_map[idx] = np.array(label_colors_list)[label_num, 0]
-            green_map[idx] = np.array(label_colors_list)[label_num, 1]
-            blue_map[idx] = np.array(label_colors_list)[label_num, 2]
+            red_map[idx] = np.array(label_colors_list)[label_num, 1]
+            green_map[idx] = np.array(label_colors_list)[label_num, 2]
+            #blue_map[idx] = np.array(label_colors_list)[label_num, 2]
 
     segmented_image = np.stack([red_map, green_map, blue_map], axis=2)
     return segmented_image

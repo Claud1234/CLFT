@@ -36,12 +36,10 @@ class ImageProcess(object):
         delta = int(h_orig / 2)
         rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)
         annotation = TF.crop(annotation, delta, 0, h_orig-delta, w_orig)
-        points_set, camera_coord, _ = crop_pointcloud(
-                                                                points_set,
-                                                                camera_coord,
-                                                                delta, 0,
-                                                                h_orig-delta,
-                                                                w_orig)
+        points_set, camera_coord, _ = crop_pointcloud(points_set,
+                                                      camera_coord,
+                                                      delta, 0,
+                                                      h_orig-delta, w_orig)
         return rgb, annotation, points_set, camera_coord
 
     def square_crop(self):
@@ -103,6 +101,13 @@ class ImageProcess(object):
         # rgb = self.normalize(to_tensor(self.colorjitter(rgb))[0:3])#only rgb
 
     def prepare_annotation(self, annotation):
+        '''
+        Reassign the indices of the objects in annotation(PointCloud);
+        :parameter annotation: 0->ignore 1->vehicle, 2->pedestrian, 3->sign,
+                                4->cyclist, 5->background
+        :return annotation: 0 -> background+sign, 1->vehicle
+                                2->pedestrian+cyclist, 3->ignore
+        '''
         annotation = np.array(annotation)
 
         mask_ignore = annotation == 0

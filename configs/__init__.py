@@ -7,8 +7,9 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
-LOG_DIR = '/home/claude/Data/logs/4th_gpu_test/'  # Path to save checkpoints
-SPLITS = '1'  # .txt file name
+LOG_DIR = '/home/claude/Data/logs/5th_gpu_test/'  # Path to save checkpoints
+SPLITS = 'training_0'  # training split file name (.txt file)
+EVAL_SPLITS = 'validation_0'  # validaztion split file name (.txt file)
 
 AUGMENT = 'square_crop'  # 'random_crop' 'random_rotate' 'random_colour_jiter'
 
@@ -23,15 +24,15 @@ IMAGE_MEAN = [0.485, 0.456, 0.406]
 IMAGE_STD = [0.229, 0.224, 0.225]
 
 
-IMAGE_BRIGHTNESS = 0.4
-IMAGE_CONTRAST = 0.4
-IMAGE_SATURATION = 0.4
-IMAGE_HUE = 0.1
+# IMAGE_BRIGHTNESS = 0.4
+# IMAGE_CONTRAST = 0.4
+# IMAGE_SATURATION = 0.4
+# IMAGE_HUE = 0.1
 
 DEVICE = 'cuda:0'  # 'cpu' for CPU training. Default ID for GPU is :0
 WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 8  # batch size
-EPOCHS = 10  # number of total epochs to run
+EPOCHS = 100  # number of total epochs to run
 SAVE_EPOCH = 10  # save the checkpoint after this mount of epochs
 
 EPOCHS_COTRAIN = 300  # number of total epochs to run
@@ -42,3 +43,4 @@ LR_SEMI = 0.00005
 
 TEST_IMAGE = './test_images/test_img.png'
 TEST_LIDAR = './test_images/test_lidar.pkl'
+TEST_ANNO = './test_images/test_anno.png'

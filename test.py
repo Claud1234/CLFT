@@ -20,10 +20,9 @@ transform = transforms.Compose([
 
 # model loading
 model = FusionNet()
-# model = model
 # checkpoint loading
 checkpoint = torch.load(
-    '/home/claude/Data/logs/4th_gpu_test/checkpoint_0009.pth')
+    '/home/claude/Data/logs/5th_gpu_test/checkpoints_19.pth')
 epoch = checkpoint['epoch']
 print('Finished Epochs:', epoch)
 # trained weights loading
@@ -35,9 +34,10 @@ model.eval().to('cuda')
 
 # Image operations
 image = Image.open('/home/claude/1.png').convert('RGB')
-w, h = image.size  # original image's w and h
-delta = int(h/2)
-image = TF.crop(image, delta, 0, h-delta, w)
+w_orig, h_orig = image.size  # original image's w and h
+delta = int(h_orig/2)
+image = TF.crop(image, delta, 0, h_orig-delta, w_orig)
+w_top_crop, h_top_crop = image.size
 orig_image = np.array(image.copy())
 image = np.array(image)
 image = transform(image).to('cuda')
@@ -47,8 +47,8 @@ image = image.unsqueeze(0)  # add a batch dimension
 # Lidar operations
 points_set, camera_coord = open_lidar(configs.TEST_LIDAR)
 points_set, camera_coord, _ = crop_pointcloud(points_set, camera_coord,
-                                              delta, 0, h-delta, w)
-X, Y, Z = get_lid_images_val(h, w, points_set, camera_coord)
+                                              delta, 0, h_orig-delta, w_orig)
+X, Y, Z = get_lid_images_val(h_top_crop, w_top_crop, points_set, camera_coord)
 X = TF.to_tensor(np.array(X))
 Y = TF.to_tensor(np.array(Y))
 Z = TF.to_tensor(np.array(Z))
@@ -57,8 +57,8 @@ lidar_image = lidar_image.to('cuda')
 lidar_image = lidar_image.unsqueeze(0)  # add a batch dimension
 # forward pass through the model
 # outputs = model(image, None, 'rgb')
-outputs = model(image, lidar_image, 'ind')
-outputs = outputs['rgb']
+outputs = model(image, lidar_image, 'all')
+outputs = outputs['fusion']
 # get the segmentation map
 segmented_image = draw_test_segmentation_map(outputs)
 # image overlay

@@ -77,5 +77,5 @@ with torch.no_grad():
                                      f'Human_IoU:{batch_IoU[1]:.4f}')
 
 IoU = overlap_cum.cpu().numpy() / union_cum.cpu().numpy()
-print('Final IoU:', IoU)
+print('Final Vehicle_IoU:{:.4f}, Human_IoU:{:.4f}'.format(IoU[0], IoU[1]))
 print('validation Complete')

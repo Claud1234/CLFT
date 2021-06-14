@@ -90,9 +90,9 @@ for epoch in range(finsihed_epochs, configs.EPOCHS):
         loss.backward()
         optimizer.step()
 
-        progress_bar.set_description(f'rgb loss: {loss_rgb:.4f}, ' +
-                                     f'lidar loss: {loss_lidar:.4f}, ' +
-                                     f'fusion loss: {loss_fusion:.4f},')
+        progress_bar.set_description(f'rgb loss:{loss_rgb:.4f}, ' +
+                                     f'lidar loss:{loss_lidar:.4f}, ' +
+                                     f'fusion loss:{loss_fusion:.4f},')
 #
     if (epoch+1) % configs.SAVE_EPOCH == 0 and epoch > 0:
         print('Saving Model...')

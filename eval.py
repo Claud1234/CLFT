@@ -73,7 +73,8 @@ with torch.no_grad():
         union_cum += area_union
 
         batch_IoU = area_overlap.cpu().numpy() / area_union.cpu().numpy()
-        progress_bar.set_description(f'IoU: {batch_IoU[0]:.4f}')
+        progress_bar.set_description(f'Vehicle_IoU:{batch_IoU[0]:.4f} ' +
+                                     f'Human_IoU:{batch_IoU[1]:.4f}')
 
 IoU = overlap_cum / union_cum
 print('Final IoU:', IoU)

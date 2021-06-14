@@ -76,6 +76,6 @@ with torch.no_grad():
         progress_bar.set_description(f'Vehicle_IoU:{batch_IoU[0]:.4f} ' +
                                      f'Human_IoU:{batch_IoU[1]:.4f}')
 
-IoU = overlap_cum / union_cum
+IoU = overlap_cum.cpu().numpy() / union_cum.cpu().numpy()
 print('Final IoU:', IoU)
 print('validation Complete')

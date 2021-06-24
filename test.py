@@ -22,7 +22,7 @@ transform = transforms.Compose([
 model = FusionNet()
 # checkpoint loading
 checkpoint = torch.load(
-    '/home/claude/Data/logs/5th_gpu_test/checkpoints_19.pth')
+    '/home/claude/Data/logs/6th_gpu_test/checkpoints_99.pth')
 epoch = checkpoint['epoch']
 print('Finished Epochs:', epoch)
 # trained weights loading
@@ -33,7 +33,7 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.eval().to('cuda')
 
 # Image operations
-image = Image.open('/home/claude/1.png').convert('RGB')
+image = Image.open(configs.TEST_IMAGE).convert('RGB')
 w_orig, h_orig = image.size  # original image's w and h
 delta = int(h_orig/2)
 image = TF.crop(image, delta, 0, h_orig-delta, w_orig)
@@ -59,6 +59,7 @@ lidar_image = lidar_image.unsqueeze(0)  # add a batch dimension
 # outputs = model(image, None, 'rgb')
 outputs = model(image, lidar_image, 'all')
 outputs = outputs['fusion']
+
 # get the segmentation map
 segmented_image = draw_test_segmentation_map(outputs)
 # image overlay

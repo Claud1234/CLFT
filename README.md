@@ -44,3 +44,11 @@ python3 train.py -r yes -p <path to checkpoint model>
 ```
 python3 test.py
 ```
+
+### Evaluate the model
+Specify the validation input-list file in configs module. Validation uses the 
+same batch size and device you set in configs module, but will only run one epoch.
+
+```
+python3 eval.py -p <path to checkpoint model>
+```

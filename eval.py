@@ -7,12 +7,15 @@ Created on June 5th, 2021
 '''
 import torch
 import argparse
+import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 import configs
 from fcn.fusion_net import FusionNet
 from fcn.dataloader import Dataset
+from utils.metrics import find_overlap
+from gettext import find
 
 
 parser = argparse.ArgumentParser(description='Model Evaluation')
@@ -41,7 +44,7 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 print('Validating...')
 
-overlap_cum, union_cum = 0, 0
+overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
 with torch.no_grad():
     batches_amount = int(len(eval_dataset)/configs.BATCH_SIZE)
     progress_bar = tqdm(eval_loader, total=batches_amount)
@@ -55,27 +58,40 @@ with torch.no_grad():
         outputs = outputs['fusion']
 
         annotation = batch['annotation']
-        # Select only 1(vehicles) and 2(ped+cyclist) indices in annotation
-        labeled = (annotation > 0) * (annotation <= 2)
-        _, pred_indices = torch.max(outputs, 1)
-        pred_indices = pred_indices * labeled.long()
-        overlap = pred_indices * (pred_indices == annotation).long()
 
-        area_pred = torch.histc(pred_indices.float(), bins=2, max=2, min=1)
-        area_overlap = torch.histc(overlap.float(), bins=2, max=2, min=1)
-        area_label = torch.histc(annotation.float(), bins=2, max=2, min=1)
-        area_union = area_pred + area_label - area_overlap
+        batch_overlap, batch_pred, batch_label, batch_union = \
+            find_overlap(outputs, annotation)
 
-        assert (area_overlap[1:] <= area_union[1:]).all(),\
-            "Intersection area should be smaller than Union area"
+        overlap_cum += batch_overlap
+        pred_cum += batch_pred
+        label_cum += batch_label
+        union_cum += batch_union
 
-        overlap_cum += area_overlap
-        union_cum += area_union
+        batch_IoU = 1.0 * batch_overlap / (np.spacing(1) + batch_union)
+        batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
+        batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-        batch_IoU = area_overlap.cpu().numpy() / area_union.cpu().numpy()
-        progress_bar.set_description(f'Vehicle_IoU:{batch_IoU[0]:.4f} ' +
-                                     f'Human_IoU:{batch_IoU[1]:.4f}')
+        progress_bar.set_description(f'BACKGROUND:IoU-{batch_IoU[0]:.4f} '
+                                     f'Precision-{batch_precision[0]:.4f} '
+                                     f'Recall-{batch_recall[0]:.4f}, '
+                                     f'VEHICLE:IoU-{batch_IoU[1]:.4f} '
+                                     f'Precision-{batch_precision[1]:.4f} '
+                                     f'Recall-{batch_recall[1]:.4f}, '
+                                     f'HUMAN:IoU-{batch_IoU[2]:.4f} '
+                                     f'Precision-{batch_precision[2]:.4f} '
+                                     f'Recall-{batch_recall[2]:.4f} ')
 
-IoU = overlap_cum.cpu().numpy() / union_cum.cpu().numpy()
-print('Final Vehicle_IoU:{:.4f}, Human_IoU:{:.4f}'.format(IoU[0], IoU[1]))
+    print('Overall Performance Computing...')
+    IoU = overlap_cum / union_cum
+    precision = overlap_cum / pred_cum
+    recall = overlap_cum / label_cum
+    print(f'BACKGROUND:IoU-{IoU[0]:.4f} '
+          f'Precision-{precision[0]:.4f} '
+          f'Recall-{recall[0]:.4f}, '
+          f'VEHICLE:IoU-{IoU[1]:.4f} '
+          f'Precision-{precision[1]:.4f} '
+          f'Recall-{recall[1]:.4f}, '
+          f'HUMAN:IoU-{IoU[2]:.4f} '
+          f'Precision-{precision[2]:.4f} '
+          f'Recall-{recall[2]:.4f} ')
 print('validation Complete')

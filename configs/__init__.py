@@ -7,9 +7,9 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
-LOG_DIR = '/home/claude/Data/logs/5th_gpu_test/'  # Path to save checkpoints
+LOG_DIR = '/home/claude/Data/logs/6th_gpu_test/'  # Path to save checkpoints
 SPLITS = 'training_0'  # training split file name (.txt file)
-EVAL_SPLITS = 'validation_0'  # validaztion split file name (.txt file)
+EVAL_SPLITS = 'validation_1'  # validation split file name (.txt file)
 
 AUGMENT = 'square_crop'  # 'random_crop' 'random_rotate' 'random_colour_jiter'
 
@@ -30,13 +30,13 @@ IMAGE_STD = [0.229, 0.224, 0.225]
 # IMAGE_HUE = 0.1
 
 DEVICE = 'cuda:0'  # 'cpu' for CPU training. Default ID for GPU is :0
+CLASS_TOTAL = 3  # number of classes
 WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 8  # batch size
 EPOCHS = 100  # number of total epochs to run
 SAVE_EPOCH = 10  # save the checkpoint after this mount of epochs
 
 EPOCHS_COTRAIN = 300  # number of total epochs to run
-CLASS_TOTAL = 4  # number of classes
 LR = 0.0001  # initial learning rate)
 LR_SEMI = 0.00005
 

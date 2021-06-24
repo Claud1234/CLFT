@@ -15,10 +15,10 @@ if not os.path.exists(logdir):
     os.makedirs(logdir)
 
 label_colors_list = [
-        (255, 0, 0),  # ignore
-        (0, 255, 0),  # vehicle
+        (255, 0, 0),
+        (0, 255, 0),
         (0, 0, 255),
-        (255, 255, 0)]  # human]
+        (255, 255, 255)]
 
 # all the classes that are present in the dataset
 ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
@@ -61,9 +61,9 @@ def draw_test_segmentation_map(outputs):
     for label_num in range(0, len(label_colors_list)):
         if label_num in class_values:
             idx = labels == label_num
-            red_map[idx] = np.array(label_colors_list)[label_num, 1]
-            green_map[idx] = np.array(label_colors_list)[label_num, 2]
-            #blue_map[idx] = np.array(label_colors_list)[label_num, 2]
+            red_map[idx] = np.array(label_colors_list)[label_num, 0]
+            green_map[idx] = np.array(label_colors_list)[label_num, 1]
+            blue_map[idx] = np.array(label_colors_list)[label_num, 2]
 
     segmented_image = np.stack([red_map, green_map, blue_map], axis=2)
     return segmented_image

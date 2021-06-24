@@ -15,7 +15,6 @@ import configs
 from fcn.fusion_net import FusionNet
 from fcn.dataloader import Dataset
 from utils.metrics import find_overlap
-from gettext import find
 
 
 parser = argparse.ArgumentParser(description='Model Evaluation')
@@ -29,7 +28,7 @@ eval_dataset = Dataset(dataroot=configs.DATAROOT,
 eval_loader = DataLoader(eval_dataset,
                          batch_size=configs.BATCH_SIZE,
                          num_workers=configs.WORKERS,
-                         shuffle=True,
+                         shuffle=False,
                          pin_memory=True,
                          drop_last=True)
 
@@ -71,27 +70,27 @@ with torch.no_grad():
         batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
         batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-        progress_bar.set_description(f'BACKGROUND:IoU-{batch_IoU[0]:.4f} '
-                                     f'Precision-{batch_precision[0]:.4f} '
-                                     f'Recall-{batch_recall[0]:.4f}, '
-                                     f'VEHICLE:IoU-{batch_IoU[1]:.4f} '
-                                     f'Precision-{batch_precision[1]:.4f} '
-                                     f'Recall-{batch_recall[1]:.4f}, '
-                                     f'HUMAN:IoU-{batch_IoU[2]:.4f} '
-                                     f'Precision-{batch_precision[2]:.4f} '
-                                     f'Recall-{batch_recall[2]:.4f} ')
+        progress_bar.set_description(f'BACKGROUND:IoU->{batch_IoU[0]:.4f} '
+                                     f'Precision->{batch_precision[0]:.4f} '
+                                     f'Recall->{batch_recall[0]:.4f}, '
+                                     f'VEHICLE:IoU->{batch_IoU[1]:.4f} '
+                                     f'Precision->{batch_precision[1]:.4f} '
+                                     f'Recall->{batch_recall[1]:.4f}, '
+                                     f'HUMAN:IoU->{batch_IoU[2]:.4f} '
+                                     f'Precision->{batch_precision[2]:.4f} '
+                                     f'Recall->{batch_recall[2]:.4f} ')
 
     print('Overall Performance Computing...')
     IoU = overlap_cum / union_cum
     precision = overlap_cum / pred_cum
     recall = overlap_cum / label_cum
-    print(f'BACKGROUND:IoU-{IoU[0]:.4f} '
-          f'Precision-{precision[0]:.4f} '
-          f'Recall-{recall[0]:.4f}, '
-          f'VEHICLE:IoU-{IoU[1]:.4f} '
-          f'Precision-{precision[1]:.4f} '
-          f'Recall-{recall[1]:.4f}, '
-          f'HUMAN:IoU-{IoU[2]:.4f} '
-          f'Precision-{precision[2]:.4f} '
-          f'Recall-{recall[2]:.4f} ')
+    print(f'BACKGROUND:IoU->{IoU[0]:.4f} '
+          f'Precision->{precision[0]:.4f} '
+          f'Recall->{recall[0]:.4f}, '
+          f'VEHICLE:IoU->{IoU[1]:.4f} '
+          f'Precision->{precision[1]:.4f} '
+          f'Recall->{recall[1]:.4f}, '
+          f'HUMAN:IoU->{IoU[2]:.4f} '
+          f'Precision->{precision[2]:.4f} '
+          f'Recall->{recall[2]:.4f} ')
 print('validation Complete')

@@ -41,7 +41,7 @@ checkpoint = torch.load(args.model_path)
 model.load_state_dict(checkpoint['model_state_dict'])
 
 model.eval()
-print('Validating...')
+print('Evaluating...')
 
 overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
 with torch.no_grad():

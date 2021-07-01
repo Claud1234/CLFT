@@ -7,8 +7,6 @@ import numpy as np
 
 import configs
 
-from tensorboardX import SummaryWriter
-
 
 logdir = configs.LOG_DIR
 if not os.path.exists(logdir):
@@ -28,23 +26,6 @@ This (`class_values`) assigns a specific class label to each of the classes.
 For example, `vehicle=0`, `human=1`, and so on.
 """
 class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
-
-
-class TensorboardWriter():
-    def __init__(self):
-        super(TensorboardWriter, self).__init__()
-    # initialize `SummaryWriter()`
-        self.writer = SummaryWriter()
-
-    def tensorboard_writer(self, loss, mIoU, pix_acc, iterations, phase=None):
-        if phase == 'train':
-            self.writer.add_scalar('Train Loss', loss, iterations)
-            self.writer.add_scalar('Train mIoU', mIoU, iterations)
-            self.writer.add_scalar('Train Pixel Acc', pix_acc, iterations)
-        if phase == 'valid':
-            self.writer.add_scalar('Valid Loss', loss, iterations)
-            self.writer.add_scalar('Valid mIoU', mIoU, iterations)
-            self.writer.add_scalar('Valid Pixel Acc', pix_acc, iterations)
 
 
 def draw_test_segmentation_map(outputs):

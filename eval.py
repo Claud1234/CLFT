@@ -15,6 +15,7 @@ import configs
 from fcn.fusion_net import FusionNet
 from fcn.dataloader import Dataset
 from utils.metrics import find_overlap
+from utils.metrics import auc_ap
 
 
 parser = argparse.ArgumentParser(description='Model Evaluation')
@@ -42,11 +43,18 @@ model.load_state_dict(checkpoint['model_state_dict'])
 
 model.eval()
 print('Evaluating...')
-
 overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
 with torch.no_grad():
     batches_amount = int(len(eval_dataset)/configs.BATCH_SIZE)
     progress_bar = tqdm(eval_loader, total=batches_amount)
+
+    background_pre = torch.zeros((batches_amount), dtype=torch.float)
+    background_rec = torch.zeros((batches_amount), dtype=torch.float)
+    vehicle_pre = torch.zeros((batches_amount), dtype=torch.float)
+    vehicle_rec = torch.zeros((batches_amount), dtype=torch.float)
+    human_pre = torch.zeros((batches_amount), dtype=torch.float)
+    human_rec = torch.zeros((batches_amount), dtype=torch.float)
+
     for i, batch in enumerate(progress_bar):
         batch['rgb'] = batch['rgb'].to(device, non_blocking=True)
         batch['lidar'] = batch['lidar'].to(device, non_blocking=True)
@@ -70,6 +78,13 @@ with torch.no_grad():
         batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
         batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
+        background_pre[i] = batch_precision[0]
+        background_rec[i] = batch_recall[0]
+        vehicle_pre[i] = batch_precision[1]
+        vehicle_rec[i] = batch_recall[1]
+        human_pre[i] = batch_precision[2]
+        human_rec[i] = batch_recall[2]
+
         progress_bar.set_description(f'BACKGROUND:IoU->{batch_IoU[0]:.4f} '
                                      f'Precision->{batch_precision[0]:.4f} '
                                      f'Recall->{batch_recall[0]:.4f}, '
@@ -81,16 +96,25 @@ with torch.no_grad():
                                      f'Recall->{batch_recall[2]:.4f} ')
 
     print('Overall Performance Computing...')
-    IoU = overlap_cum / union_cum
-    precision = overlap_cum / pred_cum
-    recall = overlap_cum / label_cum
-    print(f'BACKGROUND:IoU->{IoU[0]:.4f} '
-          f'Precision->{precision[0]:.4f} '
-          f'Recall->{recall[0]:.4f}, '
-          f'VEHICLE:IoU->{IoU[1]:.4f} '
-          f'Precision->{precision[1]:.4f} '
-          f'Recall->{recall[1]:.4f}, '
-          f'HUMAN:IoU->{IoU[2]:.4f} '
-          f'Precision->{precision[2]:.4f} '
-          f'Recall->{recall[2]:.4f} ')
+    cum_IoU = overlap_cum / union_cum
+    cum_precision = overlap_cum / pred_cum
+    cum_recall = overlap_cum / label_cum
+
+    background_AP = auc_ap(background_pre, background_rec)
+    vehicle_AP = auc_ap(vehicle_pre, vehicle_rec)
+    human_AP = auc_ap(human_pre, human_rec)
+    print('-----------------------------------------')
+    print(f'BACKGROUND:CUM_IoU->{cum_IoU[0]:.4f} '
+          f'CUM_Precision->{cum_precision[0]:.4f} '
+          f'CUM_Recall->{cum_recall[0]:.4f} '
+          f'Average Precision->{background_AP:.4f} \n')
+    print(f'VEHICLE:CUM_IoU->{cum_IoU[1]:.4f} '
+          f'CUM_Precision->{cum_precision[1]:.4f} '
+          f'CUM_Recall->{cum_recall[1]:.4f} '
+          f'Average Precision->{vehicle_AP:.4f} \n')
+    print(f'HUMAN:CUM_IoU->{cum_IoU[2]:.4f} '
+          f'CUM_Precision->{cum_precision[2]:.4f} '
+          f'CUM_Recall->{cum_recall[2]:.4f} '
+          f'Average Precision->{human_AP:.4f} ')
+    print('-----------------------------------------')
 print('validation Complete')

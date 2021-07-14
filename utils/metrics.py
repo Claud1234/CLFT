@@ -7,7 +7,7 @@ Created on June 18th, 2021
 '''
 import torch
 import configs
-
+import numpy as np
 
 '''
                            annotation
@@ -72,3 +72,35 @@ def find_overlap(output, anno):
         "Intersection area should be smaller than Union area"
 
     return area_overlap, area_pred, area_label, area_union
+
+
+def auc_ap(precision, recall):
+    '''
+    Calculating AUC AP as defined in PASCAL VOC 2010
+    :param precision: The tensor of precision of each batch for one class.
+    :param recall: The tensor of recall of each batch for one class.
+    :return auc_ap: Area-Under-Curve Average Precision
+    '''
+    # Reorganize precision-recall as the ascending order of recall values
+    precision_list = precision.cpu().numpy()
+    recall_list = recall.cpu().numpy()
+    reordering_indices = np.argsort(recall_list)
+    recall_ordered = recall_list[reordering_indices]
+    precision_ordered = precision_list[reordering_indices]
+
+    # Concatenate the point (0,0) and (1,0) to PR-curve, in case the minimum
+    # (recall, precision) is far from (0,0). For example, if minimum point is
+    # (0.9, 0.9), auc_ap should include area (0-0.9, 0-0.9).
+    recall_concat = np.concatenate([[0.0], recall_ordered, [1.0]])
+    prec_concat = np.concatenate([[0.0], precision_ordered, [0.0]])
+
+    # Refer to VOC 2010 devkit_doc 3.4.1 "setting the precision for recall r
+    # to the maximum precision obtained for any recall r′ ≥ r.
+    for i in range(len(prec_concat)-1, 0, -1):
+        prec_concat[i-1] = np.maximum(prec_concat[i-1], prec_concat[i])
+
+    diff_idx = np.where(recall_concat[1:] != recall_concat[:-1])[0]
+
+    auc_ap = np.sum((recall_concat[diff_idx + 1] - recall_concat[diff_idx]) *
+                    prec_concat[diff_idx + 1])
+    return auc_ap

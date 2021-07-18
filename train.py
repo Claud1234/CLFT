@@ -68,7 +68,7 @@ def main():
 
     train_dataset = Dataset(dataroot=configs.DATAROOT,
                             split=configs.TRAIN_SPLITS,
-                            augment=configs.AUGMENT)
+                            augment=True)
     train_loader = DataLoader(train_dataset,
                               batch_size=configs.BATCH_SIZE,
                               num_workers=configs.WORKERS,

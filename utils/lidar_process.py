@@ -5,7 +5,6 @@ lidar open and crop and value reading operations
 
 Created on May 13rd, 2021
 '''
-import torch
 import pickle
 import numpy as np
 import torchvision.transforms.functional as TF
@@ -58,7 +57,7 @@ def crop_pointcloud(points_set_or, camera_coord_or, i, j, h, w):
     return points_set, camera_coord, selected
 
 
-def get_lid_images_val(h, w, points_set, camera_coord):
+def get_unresized_lid_img_val(h, w, points_set, camera_coord):
     X = np.zeros((h, w))
     Y = np.zeros((h, w))
     Z = np.zeros((h, w))
@@ -76,15 +75,22 @@ def get_lid_images_val(h, w, points_set, camera_coord):
 
     return X, Y, Z
 
-def create_lidar_image(lidar_path):
-    points_set, camera_coord = open_lidar(lidar_path)
-    points_set, camera_coord, _ = crop_pointcloud(points_set,camera_coord,
-                                                  delta, 0, h-delta, w)
-    X,Y,Z = get_lid_images_val(h, w, points_set, camera_coord)
-    X = TF.to_tensor(np.array(X))
-    Y = TF.to_tensor(np.array(Y))
-    Z = TF.to_tensor(np.array(Z))
-    lid_images = torch.cat((X,Y,Z),0)
-    lid_images = lid_images.unsqueeze(0) # add a batch dimension
 
-    return lid_images
+def get_resized_lid_img_val(h, w, points_set, camera_coord):
+    crop_size = configs.RANDOM_CROP_SIZE
+    X = np.zeros((crop_size, crop_size))
+    Y = np.zeros((crop_size, crop_size))
+    Z = np.zeros((crop_size, crop_size))
+
+    rows = np.floor(camera_coord[:, 1]*crop_size/h)
+    cols = np.floor(camera_coord[:, 0]*crop_size/w)
+
+    X[(rows.astype(int), cols.astype(int))] = points_set[:, 0]
+    Y[(rows.astype(int), cols.astype(int))] = points_set[:, 1]
+    Z[(rows.astype(int), cols.astype(int))] = points_set[:, 2]
+
+    X = TF.to_pil_image(X.astype(np.float32))
+    Y = TF.to_pil_image(Y.astype(np.float32))
+    Z = TF.to_pil_image(Z.astype(np.float32))
+
+    return X, Y, Z

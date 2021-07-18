@@ -9,7 +9,7 @@ import torchvision.transforms.functional as TF
 import configs
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
-from utils.lidar_process import get_lid_images_val
+from utils.lidar_process import get_unresized_lid_img_val
 from fcn.fusion_net import FusionNet
 from utils.helpers import draw_test_segmentation_map, image_overlay
 
@@ -48,7 +48,8 @@ image = image.unsqueeze(0)  # add a batch dimension
 points_set, camera_coord = open_lidar(configs.TEST_LIDAR)
 points_set, camera_coord, _ = crop_pointcloud(points_set, camera_coord,
                                               delta, 0, h_orig-delta, w_orig)
-X, Y, Z = get_lid_images_val(h_top_crop, w_top_crop, points_set, camera_coord)
+X, Y, Z = get_unresized_lid_img_val(h_top_crop, w_top_crop,
+                                    points_set, camera_coord)
 X = TF.to_tensor(np.array(X))
 Y = TF.to_tensor(np.array(Y))
 Z = TF.to_tensor(np.array(Z))

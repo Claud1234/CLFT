@@ -11,7 +11,7 @@ from PIL import Image
 
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-from torchvision.transforms import InterpolationMode
+from torchvision.transforms.functional import InterpolationMode
 
 import configs
 from utils.lidar_process import crop_pointcloud
@@ -87,7 +87,7 @@ class ImageProcess(object):
         rotate_rgb = TF.affine(rgb, angle, (0, 0), 1, 0,
                                InterpolationMode.BILINEAR, fill=0)
         rotate_anno = TF.affine(anno, angle, (0, 0), 1, 0,
-                                interpolation=Image.NEAREST, fill=0)
+                                InterpolationMode.NEAREST, fill=0)
         rotate_X = TF.affine(X, angle, (0, 0), 1, 0,
                              InterpolationMode.NEAREST, fill=0)
         rotate_Y = TF.affine(Y, angle, (0, 0), 1, 0,

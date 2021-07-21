@@ -7,7 +7,6 @@ Created on May 13rd, 2021
 '''
 import os
 import random
-import warnings
 import numpy as np
 
 import torch
@@ -26,9 +25,6 @@ class Dataset():
         self.dataroot = dataroot
         self.split = split
         self.augment = augment
-        self.crop = configs.CROPPING
-        self.rotate = configs.ROTATE
-        self.colour_jitter = configs.COLOUR_JITTER
 
         self.rgb_normalize = transforms.Normalize(mean=configs.IMAGE_MEAN,
                                                   std=configs.IMAGE_STD)
@@ -62,72 +58,30 @@ class Dataset():
             top_crop_camera_coord = augment_class.top_crop()
 
         if self.augment is not None:
-            if self.crop is not None:
-                if self.crop == 'square+random':
-                    w, h, square_crop_rgb, square_crop_anno, \
-                        square_crop_points_set, square_crop_camera_coord = \
-                        augment_class.square_crop(top_crop_rgb,
-                                                  top_crop_anno,
-                                                  top_crop_points_set,
-                                                  top_crop_camera_coord)
-                    w, h, random_crop_rgb, random_crop_anno, \
-                        random_crop_points_set, random_crop_camera_coord = \
-                        augment_class.random_crop(square_crop_rgb,
-                                                  square_crop_anno,
-                                                  square_crop_points_set,
-                                                  square_crop_camera_coord)
-                    rgb = random_crop_rgb
-                    anno = random_crop_anno
-                    X, Y, Z = get_resized_lid_img_val(h, w,
-                                                      random_crop_points_set,
-                                                      random_crop_camera_coord)
-                elif self.crop == 'square':
-                    w, h, square_crop_rgb, square_crop_anno, \
-                        square_crop_points_set, square_crop_camera_coord = \
-                        augment_class.square_crop(top_crop_rgb,
-                                                  top_crop_anno,
-                                                  top_crop_points_set,
-                                                  top_crop_camera_coord)
-                    rgb = square_crop_rgb
-                    anno = square_crop_anno
-                    X, Y, Z = \
-                        get_unresized_lid_img_val(h, w,
-                                                  square_crop_points_set,
-                                                  square_crop_camera_coord)
-                elif self.crop == 'random':
-                    w, h, random_crop_rgb, random_crop_anno, \
-                        random_crop_points_set, random_crop_camera_coord = \
-                        augment_class.random_crop(top_crop_rgb,
-                                                  top_crop_anno,
-                                                  top_crop_points_set,
-                                                  top_crop_camera_coord)
-                    rgb = random_crop_rgb
-                    anno = random_crop_anno
-                    X, Y, Z = get_resized_lid_img_val(h, w,
-                                                      random_crop_points_set,
-                                                      random_crop_camera_coord)
-                elif self.rotate is True and random.random() > 0.5:
+            _, _, square_crop_rgb, square_crop_anno, \
+                square_crop_points_set, square_crop_camera_coord = \
+                augment_class.square_crop(top_crop_rgb,
+                                          top_crop_anno,
+                                          top_crop_points_set,
+                                          top_crop_camera_coord)
+            w_rand, h_rand, random_crop_rgb, random_crop_anno, \
+                random_crop_points_set, random_crop_camera_coord = \
+                augment_class.random_crop(square_crop_rgb,
+                                          square_crop_anno,
+                                          square_crop_points_set,
+                                          square_crop_camera_coord)
+            rgb = random_crop_rgb
+            anno = random_crop_anno
+            X, Y, Z = get_resized_lid_img_val(h_rand, w_rand,
+                                              random_crop_points_set,
+                                              random_crop_camera_coord)
+
+            if random.random() > 0.5:
                     rgb, anno, X, Y, Z = augment_class.random_rotate(rgb, anno,
                                                                      X, Y, Z)
-                elif self.colour_jitter is True:
-                    rgb = augment_class.colour_jitter(rgb)
-                else:
-                    warnings.warn('Please check Data Augment configrations')
 
-            else:  # self.crop is None
-                rgb = top_crop_rgb
-                anno = top_crop_anno
-                points_set = top_crop_points_set
-                camera_coord = top_crop_camera_coord
+            rgb = augment_class.colour_jitter(rgb)
 
-                w, h = rgb.size
-                X, Y, Z = get_unresized_lid_img_val(h, w,
-                                                    points_set, camera_coord)
-                if self.rotate is True and random.random() > 0.5:
-                    rgb, anno, X, Y, Z = augment_class.random_rotate(rgb, anno,
-                                                                     X, Y, Z)
-                if self.colour_jitter is True:
-                    rgb = augment_class.colour_jitter(rgb)
         else:  # slef.augment is None
             rgb = top_crop_rgb
             anno = top_crop_anno

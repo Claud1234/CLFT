@@ -35,7 +35,7 @@ class ImageProcess(object):
         points_set, camera_coord = open_lidar(self.lidar_path)
 
         w_orig, h_orig = rgb.size
-        delta = int(h_orig / 3)
+        delta = int(h_orig / 2)
         rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)
         annotation = TF.crop(annotation, delta, 0, h_orig-delta, w_orig)
         points_set, camera_coord, _ = crop_pointcloud(points_set,

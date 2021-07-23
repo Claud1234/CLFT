@@ -15,6 +15,7 @@ from fcn.dataloader import Dataset
 from fcn.fusion_net import FusionNet
 from utils.helpers import adjust_learning_rate
 from utils.helpers import save_model_dict
+from utils.helpers import EarlyStopping
 from utils.metrics import find_overlap
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
@@ -37,6 +38,8 @@ def main():
     model = FusionNet()
     model.to(device)
     print("Use Device: {} for training".format(configs.DEVICE))
+
+    early_stopping = EarlyStopping()
 
     # Define loss function (criterion) and optimizer
     weight_loss = torch.Tensor(configs.CLASS_TOTAL).fill_(0)
@@ -116,11 +119,17 @@ def main():
                            {'train': train_epoch_IoU[2],
                             'valid': valid_epoch_IoU[2]}, epoch)
         writer.close()
+
         # Save the checkpoint
-        if (epoch+1) % configs.SAVE_EPOCH == 0 and epoch > 0:
-            print('Saving Model...')
-            save_model_dict(epoch, model, optimizer)
-            print('Saving Model Complete')
+        if configs.EARLY_STOPPING is True:
+            early_stopping(valid_epoch_loss_rgb, epoch, model, optimizer)
+            if early_stopping.early_stop_trigger is True:
+                break
+        else:
+            if (epoch+1) % configs.SAVE_EPOCH == 0 and epoch > 0:
+                print('Saving Model...')
+                save_model_dict(epoch, model, optimizer)
+                print('Saving Model Complete')
     print('Training Complete')
 
 

@@ -7,7 +7,7 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
-LOG_DIR = '/home/claude/Data/logs/9th_gpu_test/'  # Path to save checkpoints
+LOG_DIR = '/home/claude/Data/logs/10th_early_stop/'  # Path to save checkpoints
 TRAIN_SPLITS = 'training_7'  # training split file name (.txt file)
 VALID_SPLITS = 'validation_7'  # Validation(while training) split file name
 EVAL_SPLITS = 'validation_1'  # Evaluation split file name (.txt file)
@@ -17,6 +17,7 @@ RANDOM_CROP_SIZE = 128
 ROTATE_RANGE = 20
 JITTER_PARAM = [0.4, 0.4, 0.4, 0.1]  # [brightness, contrast, saturation, hue]
 
+# Data normalization
 LIDAR_MEAN = [-0.17263354, 0.85321806, 24.5527253]
 LIDAR_STD = [7.34546552, 1.17227659, 15.83745082]
 
@@ -34,6 +35,9 @@ EPOCHS_COTRAIN = 300  # number of total epochs to run
 LR = 0.00003  # initial learning rate
 LR_SEMI = 0.00005
 
+# Early stopping
+EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working
+PATIENCE = 20
 
 TEST_IMAGE = './test_images/test_img.png'
 TEST_LIDAR = './test_images/test_lidar.pkl'

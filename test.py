@@ -22,7 +22,7 @@ transform = transforms.Compose([
 model = FusionNet()
 # checkpoint loading
 checkpoint = torch.load(
-    '/home/claude/Data/logs/6th_gpu_test/checkpoints_99.pth')
+    '/home/claude/Data/logs/9th_gpu_test/checkpoints_99.pth')
 epoch = checkpoint['epoch']
 print('Finished Epochs:', epoch)
 # trained weights loading
@@ -35,7 +35,7 @@ model.eval().to('cuda')
 # Image operations
 image = Image.open(configs.TEST_IMAGE).convert('RGB')
 w_orig, h_orig = image.size  # original image's w and h
-delta = int(h_orig/2)
+delta = int(h_orig/3)
 image = TF.crop(image, delta, 0, h_orig-delta, w_orig)
 w_top_crop, h_top_crop = image.size
 orig_image = np.array(image.copy())

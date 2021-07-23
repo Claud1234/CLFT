@@ -29,12 +29,8 @@ class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
 def draw_test_segmentation_map(outputs):
-    """
-    This function will apply color mask as per the output that we
-    get when executing `test.py` or `test_vid.py` on a single image
-    or a video. NOT TO BE USED WHILE TRAINING OR VALIDATING.
-    """
     labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
+    # labels = outputs.detach().cpu().numpy()
     red_map = np.zeros_like(labels).astype(np.uint8)
     green_map = np.zeros_like(labels).astype(np.uint8)
     blue_map = np.zeros_like(labels).astype(np.uint8)
@@ -51,11 +47,6 @@ def draw_test_segmentation_map(outputs):
 
 
 def image_overlay(image, segmented_image):
-    """
-    This function will apply an overlay of the output segmentation
-    map on top of the orifinal input image. MAINLY TO BE USED WHEN
-    EXECUTING `test.py` or `test_vid.py`.
-    """
     alpha = 0.6  # how much transparency to apply
     beta = 1 - alpha  # alpha + beta should equal 1
     gamma = 0  # scalar added to each sum
@@ -94,3 +85,28 @@ def adjust_learning_rate_semi(optimizer, epoch, epoch_max, args):
         param_group['lr'] = lr
 
     return lr
+
+
+class EarlyStopping():
+    def __init__(self):
+        self.patience = configs.PATIENCE
+        self.min_loss = None
+        self.early_stop_trigger = False
+        self.count = 0
+
+    def __call__(self, valid_loss, epoch, model, optimizer):
+        if self.min_loss is None:
+            self.min_loss = valid_loss
+        elif valid_loss > self.min_loss:
+            self.count += 1
+            print(f'Early Stopping Counter: {self.count} of {self.patience}')
+            if self.count >= self.patience:
+                self.early_stop_trigger = True
+                print('Early Stopping Triggered!')
+        else:
+            print(f'Validation loss decreased from {self.min_loss:.4f} ' +
+                  f'to {valid_loss:.4f}')
+            self.min_loss = valid_loss
+            save_model_dict(epoch, model, optimizer)
+            print('Saving Model...')
+            self.count = 0

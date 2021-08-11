@@ -14,9 +14,10 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
 import configs
-from utils.lidar_process import get_resized_lid_img_val
 from utils.lidar_process import get_unresized_lid_img_val
-from utils.data_augment import ImageProcess
+from utils.data_augment import TopCrop
+from utils.data_augment import AugmentShuffle
+from builtins import getattr
 
 
 class Dataset():
@@ -25,6 +26,7 @@ class Dataset():
         self.dataroot = dataroot
         self.split = split
         self.augment = augment
+        self.augment_shuffle = configs.AUGMENT_SHUFFLE
 
         self.rgb_normalize = transforms.Normalize(mean=configs.IMAGE_MEAN,
                                                   std=configs.IMAGE_STD)
@@ -50,39 +52,33 @@ class Dataset():
         assert (rgb_name == lidar_name)
         assert (ann_name == lidar_name)
 
-        augment_class = ImageProcess(cam_path, annotation_path, lidar_path)
-
-        # Apply top crop for raw data to crop the 1/3 top of the images
+        top_crop_class = TopCrop(cam_path, annotation_path, lidar_path)
+        # Apply top crop for raw data to crop the 1/2 top of the images
         top_crop_rgb, top_crop_anno,\
             top_crop_points_set,\
-            top_crop_camera_coord = augment_class.top_crop()
+            top_crop_camera_coord = top_crop_class.top_crop()
 
+        augment_class = AugmentShuffle(top_crop_rgb, top_crop_anno,
+                                       top_crop_points_set,
+                                       top_crop_camera_coord)
         if self.augment is not None:
-            _, _, square_crop_rgb, square_crop_anno, \
-                square_crop_points_set, square_crop_camera_coord = \
-                augment_class.square_crop(top_crop_rgb,
-                                          top_crop_anno,
-                                          top_crop_points_set,
-                                          top_crop_camera_coord)
-            w_rand, h_rand, random_crop_rgb, random_crop_anno, \
-                random_crop_points_set, random_crop_camera_coord = \
-                augment_class.random_crop(square_crop_rgb,
-                                          square_crop_anno,
-                                          square_crop_points_set,
-                                          square_crop_camera_coord)
-            rgb = random_crop_rgb
-            anno = random_crop_anno
-            X, Y, Z = get_resized_lid_img_val(h_rand, w_rand,
-                                              random_crop_points_set,
-                                              random_crop_camera_coord)
+            if self.augment_shuffle is True:
+                aug_list = ['random_crop', 'random_rotate', 'colour_jitter',
+                            'random_horizontal_flip', 'random_vertical_flip']
+                random.shuffle(aug_list)
 
-            if random.random() > 0.5:
-                    rgb, anno, X, Y, Z = augment_class.random_rotate(rgb, anno,
-                                                                     X, Y, Z)
+                for i in range(len(aug_list)):
+                    augment_proc = getattr(augment_class, aug_list[i])
+                    rgb, anno, X, Y, Z = augment_proc()
 
-            rgb = augment_class.colour_jitter(rgb)
+            else:  # self.augment_shuffle is False
+                rgb, anno, X, Y, Z = augment_class.random_crop()
+                rgb, anno, X, Y, Z = augment_class.random_rotate()
+                rgb, anno, X, Y, Z = augment_class.colour_jitter()
+                rgb, anno, X, Y, Z = augment_class.random_horizontal_flip()
+                rgb, anno, X, Y, Z = augment_class.random_vertical_flip()
 
-        else:  # slef.augment is None
+        else:  # slef.augment is None, all input data are only top cropped
             rgb = top_crop_rgb
             anno = top_crop_anno
             points_set = top_crop_points_set

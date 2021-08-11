@@ -13,8 +13,9 @@ VALID_SPLITS = 'validation_7'  # Validation(while training) split file name
 EVAL_SPLITS = 'validation_1'  # Evaluation split file name (.txt file)
 
 # Data augment configurations
+AUGMENT_SHUFFLE = True  # False
 RANDOM_CROP_SIZE = 128
-ROTATE_RANGE = 20
+ROTATE_RANGE = 20  # rotate range (-20, 20)
 JITTER_PARAM = [0.4, 0.4, 0.4, 0.1]  # [brightness, contrast, saturation, hue]
 
 # Data normalization

@@ -127,12 +127,6 @@ class AugmentShuffle(object):
         self.anno = TF.affine(self.anno, angle, (0, 0), 1, 0,
                               InterpolationMode.NEAREST, fill=0)
 
-        if self.h_resize is not None and self.w_resize is not None:
-            self.X, self.Y, self.Z = get_resized_lid_img_val(self.h_resize,
-                                                             self.w_resize,
-                                                             self.points_set,
-                                                             self.camera_coord)
-
         if self.X is None and self.Y is None and self.Z is None:
             self.X, self.Y, self.Z = get_unresized_lid_img_val(
                                                             h, w,

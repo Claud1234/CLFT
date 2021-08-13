@@ -5,3 +5,4 @@ setup.sh
 *.pyc
 test1.py
 runs
+augment_shuffle_images

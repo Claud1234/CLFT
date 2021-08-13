@@ -17,7 +17,6 @@ import configs
 from utils.lidar_process import get_unresized_lid_img_val
 from utils.data_augment import TopCrop
 from utils.data_augment import AugmentShuffle
-from builtins import getattr
 
 
 class Dataset():

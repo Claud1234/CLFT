@@ -6,6 +6,7 @@ RGB, annoation and lidar augmentation operations
 Created on May 13rd, 2021
 '''
 import torch
+import random
 import numpy as np
 from PIL import Image
 
@@ -151,33 +152,32 @@ class AugmentShuffle(object):
         return self.rgb, self.anno, self.X, self.Y, self.Z
 
     def random_horizontal_flip(self):
-        w, h = self.rgb.size
-        hflipper = transforms.RandomHorizontalFlip(p=0.5)
-        self.rgb = hflipper(self.rgb)
-        self.anno = hflipper(self.anno)
-
-        if self.X is None and self.Y is None and self.Z is None:
-            self.X, self.Y, self.Z = get_unresized_lid_img_val(
+        if random.random() > 0.5:
+            w, h = self.rgb.size
+            self.rgb = TF.hflip(self.rgb)
+            self.anno = TF.hflip(self.anno)
+            if self.X is None and self.Y is None and self.Z is None:
+                self.X, self.Y, self.Z = get_unresized_lid_img_val(
                                                             h, w,
                                                             self.points_set,
                                                             self.camera_coord)
-        self.X = hflipper(self.X)
-        self.Y = hflipper(self.Y)
-        self.Z = hflipper(self.Z)
+            self.X = TF.hflip(self.X)
+            self.Y = TF.hflip(self.Y)
+            self.Z = TF.hflip(self.Z)
         return self.rgb, self.anno, self.X, self.Y, self.Z
 
     def random_vertical_flip(self):
-        w, h = self.rgb.size
-        vflipper = transforms.RandomVerticalFlip(p=0.5)
-        self.rgb = vflipper(self.rgb)
-        self.anno = vflipper(self.anno)
+        if random.random() >= 0.5:
+            w, h = self.rgb.size
+            self.rgb = TF.vflip(self.rgb)
+            self.anno = TF.vflip(self.anno)
 
-        if self.X is None and self.Y is None and self.Z is None:
-            self.X, self.Y, self.Z = get_unresized_lid_img_val(
+            if self.X is None and self.Y is None and self.Z is None:
+                self.X, self.Y, self.Z = get_unresized_lid_img_val(
                                                             h, w,
                                                             self.points_set,
                                                             self.camera_coord)
-        self.X = vflipper(self.X)
-        self.Y = vflipper(self.Y)
-        self.Z = vflipper(self.Z)
+            self.X = TF.vflip(self.X)
+            self.Y = TF.vflip(self.Y)
+            self.Z = TF.vflip(self.Z)
         return self.rgb, self.anno, self.X, self.Y, self.Z

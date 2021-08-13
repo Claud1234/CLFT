@@ -167,7 +167,7 @@ class AugmentShuffle(object):
         return self.rgb, self.anno, self.X, self.Y, self.Z
 
     def random_vertical_flip(self):
-        if random.random() >= 0.5:
+        if random.random() > 0.5:
             w, h = self.rgb.size
             self.rgb = TF.vflip(self.rgb)
             self.anno = TF.vflip(self.anno)

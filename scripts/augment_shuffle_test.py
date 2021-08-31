@@ -27,7 +27,7 @@ aug_3 = 'random_horizontal_flip'
 aug_4 = 'random_vertical_flip'
 aug_5 = 'colour_jitter'
 
-aug_list = [aug_4, aug_3, aug_2, aug_1]
+aug_list = [aug_4, aug_3, aug_2]
 
 for i in range(len(aug_list)):
     augment_proc = getattr(augment_class, aug_list[i])
@@ -45,4 +45,4 @@ plt.subplot(2, 2, 1), plt.imshow(rgb), plt.title('rgb')
 plt.subplot(2, 2, 2), plt.imshow(X), plt.title('X')
 plt.subplot(2, 2, 3), plt.imshow(Y), plt.title('Y')
 plt.subplot(2, 2, 4), plt.imshow(Z), plt.title('Z')
-plt.savefig('4321.png')
+plt.savefig('test.png')

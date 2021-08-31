@@ -78,43 +78,33 @@ with torch.no_grad():
         batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
         batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-        background_pre[i] = batch_precision[0]
-        background_rec[i] = batch_recall[0]
-        vehicle_pre[i] = batch_precision[1]
-        vehicle_rec[i] = batch_recall[1]
-        human_pre[i] = batch_precision[2]
-        human_rec[i] = batch_recall[2]
+        vehicle_pre[i] = batch_precision[0]
+        vehicle_rec[i] = batch_recall[0]
+        human_pre[i] = batch_precision[1]
+        human_rec[i] = batch_recall[1]
 
-        progress_bar.set_description(f'BACKGROUND:IoU->{batch_IoU[0]:.4f} '
+        progress_bar.set_description(f'VEHICLE:IoU->{batch_IoU[0]:.4f} '
                                      f'Precision->{batch_precision[0]:.4f} '
-                                     f'Recall->{batch_recall[0]:.4f}, '
-                                     f'VEHICLE:IoU->{batch_IoU[1]:.4f} '
+                                     f'Recall->{batch_recall[0]:.4f}'
+                                     f'HUMAN:IoU->{batch_IoU[1]:.4f} '
                                      f'Precision->{batch_precision[1]:.4f} '
-                                     f'Recall->{batch_recall[1]:.4f}, '
-                                     f'HUMAN:IoU->{batch_IoU[2]:.4f} '
-                                     f'Precision->{batch_precision[2]:.4f} '
-                                     f'Recall->{batch_recall[2]:.4f} ')
+                                     f'Recall->{batch_recall[1]:.4f} ')
 
     print('Overall Performance Computing...')
     cum_IoU = overlap_cum / union_cum
     cum_precision = overlap_cum / pred_cum
     cum_recall = overlap_cum / label_cum
 
-    background_AP = auc_ap(background_pre, background_rec)
     vehicle_AP = auc_ap(vehicle_pre, vehicle_rec)
     human_AP = auc_ap(human_pre, human_rec)
     print('-----------------------------------------')
-    print(f'BACKGROUND:CUM_IoU->{cum_IoU[0]:.4f} '
+    print(f'VEHICLE:CUM_IoU->{cum_IoU[0]:.4f} '
           f'CUM_Precision->{cum_precision[0]:.4f} '
           f'CUM_Recall->{cum_recall[0]:.4f} '
-          f'Average Precision->{background_AP:.4f} \n')
-    print(f'VEHICLE:CUM_IoU->{cum_IoU[1]:.4f} '
+          f'Average Precision->{vehicle_AP:.4f} \n')
+    print(f'HUMAN:CUM_IoU->{cum_IoU[1]:.4f} '
           f'CUM_Precision->{cum_precision[1]:.4f} '
           f'CUM_Recall->{cum_recall[1]:.4f} '
-          f'Average Precision->{vehicle_AP:.4f} \n')
-    print(f'HUMAN:CUM_IoU->{cum_IoU[2]:.4f} '
-          f'CUM_Precision->{cum_precision[2]:.4f} '
-          f'CUM_Recall->{cum_recall[2]:.4f} '
           f'Average Precision->{human_AP:.4f} ')
     print('-----------------------------------------')
 print('validation Complete')

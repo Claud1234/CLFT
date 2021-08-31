@@ -109,9 +109,9 @@ def main():
         writer.add_scalars('Loss', {'train': train_epoch_loss_rgb,
                                     'valid': valid_epoch_loss_rgb}, epoch)
         # Plot the train and validation IoU in Tensorboard
-        writer.add_scalars('Background_IoU',
-                           {'train': train_epoch_IoU[0],
-                            'valid': valid_epoch_IoU[0]}, epoch)
+#         writer.add_scalars('Background_IoU',
+#                            {'train': train_epoch_IoU[0],
+#                             'valid': valid_epoch_IoU[0]}, epoch)
         writer.add_scalars('Vehicle_IoU',
                            {'train': train_epoch_IoU[1],
                             'valid': valid_epoch_IoU[1]}, epoch)
@@ -122,7 +122,7 @@ def main():
 
         # Save the checkpoint
         if configs.EARLY_STOPPING is True:
-            early_stopping(valid_epoch_loss_rgb, epoch, model, optimizer)
+            early_stopping(valid_epoch_IoU[1], epoch, model, optimizer)
             if early_stopping.early_stop_trigger is True:
                 break
         else:
@@ -180,9 +180,9 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
                                      f'fusion loss:{loss_fusion:.4f},')
     # The IoU of one epoch
     train_epoch_IoU = overlap_cum / union_cum
-    print(f'Training IoU of background for Epoch: {train_epoch_IoU[0]:.4f}')
+#     print(f'Training IoU of background for Epoch: {train_epoch_IoU[0]:.4f}')
     print(f'Training IoU of vehicles for Epoch: {train_epoch_IoU[1]:.4f}')
-    print(f'Training IoU of human for Epoch: {train_epoch_IoU[2]:.4f}')
+#     print(f'Training IoU of human for Epoch: {train_epoch_IoU[2]:.4f}')
     # The loss_rgb of one epoch
     train_epoch_loss_rgb = train_loss_rgb / count
     print(f'Average Training RGB Loss for Epoch: {train_epoch_loss_rgb:.4f}')
@@ -233,9 +233,9 @@ def validate(valid_dataset, valid_loader, model, criterion, epoch):
                                          f'fusion loss:{loss_fusion:.4f},')
     # The IoU of one epoch
     valid_epoch_IoU = overlap_cum / union_cum
-    print(f'Validatoin IoU of background for Epoch: {valid_epoch_IoU[0]:.4f}')
+#     print(f'Validatoin IoU of background for Epoch: {valid_epoch_IoU[0]:.4f}')
     print(f'Validatoin IoU of vehicles for Epoch: {valid_epoch_IoU[1]:.4f}')
-    print(f'Validatoin IoU of human for Epoch: {valid_epoch_IoU[2]:.4f}')
+#     print(f'Validatoin IoU of human for Epoch: {valid_epoch_IoU[2]:.4f}')
     # The loss_rgb of one epoch
     valid_epoch_loss_rgb = valid_loss_rgb / count
     print(f'Average Validation RGB Loss for Epoch: {valid_epoch_loss_rgb:.4f}')

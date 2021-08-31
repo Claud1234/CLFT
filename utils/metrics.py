@@ -10,24 +10,20 @@ import configs
 import numpy as np
 
 '''
-                           annotation
-           |--------------|---------------|------------|------------
-           |              | background(1) | vehicle(2) | human(3)
-prediction |background(1) |       a       |     b      |     c
-           |vehicle(2)    |       d       |     e      |     f
-           |human(3)      |       g       |     h      |     i
+                         annotation
+           |-----------|------------|------------
+           |           | vehicle(0) | human(1)
+prediction |vehicle(0) |     a      |     b
+           |human(1)   |     c      |     d
 
-IoU(1) = a / (a + b  + c + d + g)
-IoU(2) = e / (d + e + f + b + h)
-IoU(3) = i / (g + h + i + c + f)
+IoU(0) = a / (a + b + c)
+IoU(1) = d / (b + c + d)
 
-precision(1) = a / (a + b + c)
-precision(2) = e / (d + e + f)
-precision(3) = i / (g + h + i)
+precision(0) = a / (a + b)
+precision(1) = d / (c + d)
 
-recall(1) = a / (a + d + g)
-recall(2) = e / (b + e + h)
-recall(3) = i / (c + f + i)
+recall(0) = a / (a + c)
+recall(1) = d / (b + d)
 '''
 
 
@@ -46,26 +42,26 @@ def find_overlap(output, anno):
     pred_indices = pred_indices + 1  # (8, 160, 480)
     anno = anno + 1  # (8, 160, 480)
     # If pixel value in anno is 4(ignore), then it is False;
-    # if pixel value if anno is 1 or 2 or 3, then it is True.
-    labeled = (anno > 0) * (anno <= n_classes)  # (8, 160, 480)
+    # if pixel value in anno is 2 or 3, then it is True.
+    labeled = (anno > 1) * (anno <= n_classes)  # (8, 160, 480)
     # For 'label.long()', True will be 1, False will be 0.
-    # In prediction, if value is 1 or 2 or 3, then no change;
+    # In prediction, if value is 2 or 3, then no change;
     #                if value is 4, then change to 0
     pred_indices = pred_indices * labeled.long()
     # If pixel value in prediction is same as anno, then keep it same;
     # if pixel value in prediction is not same as anno, then change to 0
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
 
-    # (a, e, i)
+    # (a, d)
     area_overlap = torch.histc(overlap.float(),
-                               bins=n_classes, max=n_classes, min=1)
-    # ((a + b + c), (d + e + f), (g + h + i))
+                               bins=n_classes-1, max=n_classes, min=2)
+    # ((a + b), (c + d)
     area_pred = torch.histc(pred_indices.float(),
-                            bins=n_classes, max=n_classes, min=1)
-    # ((a + d + j), (b + e + h), (c + f + i))
+                            bins=n_classes-1, max=n_classes, min=2)
+    # ((a + c), (b + d)
     area_label = torch.histc(anno.float(),
-                             bins=n_classes, max=n_classes, min=1)
-    # ((a + b  + c + d + g), (d + e + f + b + h), (g + h + i + c + f))
+                             bins=n_classes-1, max=n_classes, min=2)
+    # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 
     assert (area_overlap <= area_union).all(),\

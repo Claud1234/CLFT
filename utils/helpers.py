@@ -61,7 +61,7 @@ def save_model_dict(epoch, model, optimizer):
     torch.save({'epoch': epoch+1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()},
-               logdir+f"checkpoints_{epoch}.pth")
+               logdir+f"checkpoint_{epoch}.pth")
 
 
 def adjust_learning_rate(optimizer, epoch, epoch_max):
@@ -90,23 +90,23 @@ def adjust_learning_rate_semi(optimizer, epoch, epoch_max, args):
 class EarlyStopping():
     def __init__(self):
         self.patience = configs.PATIENCE
-        self.min_loss = None
+        self.min_param = None
         self.early_stop_trigger = False
         self.count = 0
 
-    def __call__(self, valid_loss, epoch, model, optimizer):
-        if self.min_loss is None:
-            self.min_loss = valid_loss
-        elif valid_loss > self.min_loss:
+    def __call__(self, valid_param, epoch, model, optimizer):
+        if self.min_param is None:
+            self.min_param = valid_param
+        elif valid_param < self.min_param:
             self.count += 1
             print(f'Early Stopping Counter: {self.count} of {self.patience}')
             if self.count >= self.patience:
                 self.early_stop_trigger = True
                 print('Early Stopping Triggered!')
         else:
-            print(f'Validation loss decreased from {self.min_loss:.4f} ' +
-                  f'to {valid_loss:.4f}')
-            self.min_loss = valid_loss
+            print(f'Validation IoU increased from {self.min_param:.4f} ' +
+                  f'to {valid_param:.4f}')
+            self.min_param = valid_param
             save_model_dict(epoch, model, optimizer)
             print('Saving Model...')
             self.count = 0

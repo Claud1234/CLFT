@@ -6,3 +6,4 @@ setup.sh
 test1.py
 runs
 augment_shuffle_images
+logs

@@ -1,5 +1,23 @@
 # TalTech_DriverlessProject
 
+## iseAuto dataset process
+Please make sure you have ROS, pcl-ros, openCV, catkin-build-tools installed
+
+The node converts pointcloud and compressed image topics to '.bin' and '.png' file refer to 
+[this](https://github.com/leofansq/Tools_RosBag2KITTI) project.
+
+Node subscribes lidar topic '/lidar_front/velodyne_points' and compressed image
+topic '/front_camera/image_color_rect/compressed'. Make sure remap the topics if you have 
+differnt names.
+
+```
+cd catkin_ws
+catkin build
+source devel/setup.bash
+rosrun ttu_autolab bags_to_files
+```
+
+
 ## Introduction
 
 ## Prerequisites

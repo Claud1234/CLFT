@@ -7,10 +7,10 @@ Created on May 12nd, 2021
 '''
 
 DATAROOT = '/home/claude/Data/mauro_waymo'
-LOG_DIR = '/home/claude/Data/logs/10th_early_stop/'  # Path to save checkpoints
-TRAIN_SPLITS = 'training_7'  # training split file name (.txt file)
-VALID_SPLITS = 'validation_7'  # Validation(while training) split file name
-EVAL_SPLITS = 'validation_1'  # Evaluation split file name (.txt file)
+LOG_DIR = '/media/storage/data/fusion_logs/phase_0_train_by_all/'  # Path to save checkpoints
+TRAIN_SPLITS = 'train_all'  # training split file name (.txt file)
+VALID_SPLITS = 'early_stop_valid'  # Validation(while training) split file name
+EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 
 # Data augment configurations
 AUGMENT_SHUFFLE = True  # False
@@ -29,17 +29,17 @@ DEVICE = 'cuda:0'  # 'cpu' for CPU training. Default ID for GPU is :0
 CLASS_TOTAL = 4  # number of classes
 WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 16  # batch size
-EPOCHS = 100  # number of total epochs to run
+EPOCHS = 200  # number of total epochs to run
 SAVE_EPOCH = 10  # save the checkpoint after this mount of epochs
 
-EPOCHS_COTRAIN = 300  # number of total epochs to run
-LR = 0.00003  # initial learning rate
-LR_SEMI = 0.00005
+EPOCHS_COTRAIN = 200  # number of total epochs to run
+LR = 0.0001   # initial learning rate
+LR_SEMI = 0.00003
 
 # Early stopping
 EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working
-PATIENCE = 20
+PATIENCE = 40
 
-TEST_IMAGE = './test_images/test_img.png'
-TEST_LIDAR = './test_images/test_lidar.pkl'
-TEST_ANNO = './test_images/test_anno.png'
+TEST_IMAGE = './test_images/img_human.png'
+TEST_LIDAR = './test_images/lidar_human.pkl'
+TEST_ANNO = './test_images/anno_human.png'

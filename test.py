@@ -22,7 +22,7 @@ transform = transforms.Compose([
 model = FusionNet()
 # checkpoint loading
 checkpoint = torch.load(
-    '/home/claude/Data/logs/9th_gpu_test/checkpoints_99.pth')
+    '/media/storage/data/fusion_logs/phase_0_new_design//checkpoint_57.pth')
 epoch = checkpoint['epoch']
 print('Finished Epochs:', epoch)
 # trained weights loading

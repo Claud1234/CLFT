@@ -7,7 +7,6 @@ test1.py
 runs
 augment_shuffle_images
 logs
-catkin_ws/src/ttu_autolab/output/*
 build
 .catkin_tools
 devel

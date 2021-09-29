@@ -59,8 +59,8 @@ def render_lidar_on_image(pts_lidar, rgb, calib):
                                  np.ones((imgfov_pc_lidar.shape[0], 1))))
     imgfov_pc_cam2 = proj_velo2cam2 @ imgfov_pc_lidar.transpose()
 
-    cmap = plt.cm.get_cmap('hsv', 512)
-    cmap = np.array([cmap(i) for i in range(512)])[:, :3] * 511
+    cmap = plt.cm.get_cmap('hsv', 2048)
+    cmap = np.array([cmap(i) for i in range(2048)])[:, :3] * 2047
 
     for i in range(imgfov_pc_pixel.shape[1]):
         depth = imgfov_pc_cam2[2, i]

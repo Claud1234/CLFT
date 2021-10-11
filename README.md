@@ -17,8 +17,27 @@ source devel/setup.bash
 rosrun ttu_autolab bags_to_files
 ```
 
+There will be a 'png' and 'pcd' folder saved in path '~package/output'. Then run 
+'/devel/lib/ttu_autolab/pcd2bin', it will convert pcd files to bin files and save them 
+in the same path '~package/output'.
 
-## Introduction
+The python script project lidar points to image takes three input arguments, images path,
+lidar path and transformation text file.
+
+```
+cd catkin_ws/src/ttu_autolab/script
+python3 lidar_camera_projection.py ../output/png ../output/bin ../config/calib.txt
+```
+
+There will be two folders 'lidar_rgb' and 'lidar_blank' saved in path '~package/output'.
+Please manually check the point-image alignment in 'lidar_rgb', is the alignment is not good,
+you can go to script to choose project previous and next lidar to the image until have 
+a good alignment. 
+
+
+There are some other scripts  
+
+## Training and Evaluation
 
 ## Prerequisites
 * Please make sure Python version in your machine is at least 3.6

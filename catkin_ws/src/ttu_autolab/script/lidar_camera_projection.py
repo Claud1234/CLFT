@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 
 
 def lidar_projection(png_in_dir, bin_in_dir, calib_file_path):
-    dir_out_rgb = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq20/lidar_rgb'
+    dir_out_rgb = '../output/day_fair/sq12/lidar_rgb'
     if not os.path.exists(dir_out_rgb):
         os.mkdir(dir_out_rgb)
 
-    dir_out_blank = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq20/lidar_blank'
+    dir_out_blank = '../output/day_fair/sq12/lidar_blank'
     if not os.path.exists(dir_out_blank):
         os.mkdir(dir_out_blank)
 

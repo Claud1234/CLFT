@@ -6,13 +6,13 @@ Script to add the squence number before the file name'
 import os
 
 
-path_0 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq11/png'
-path_1 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq11/pcd'
-path_2 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq11/bin'
-path_3 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq11/lidar_rgb'
-path_4 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq11/lidar_blank'
+path_0 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq12/bin'
+path_1 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq12/pcd'
+path_2 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq12/bin'
+path_3 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq12/bin'
+path_4 = '/media/usb/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/output/day_fair/sq12/bin'
 
-string = 'sq11_'
+string = 'sq12_'
 
 files_0 = os.listdir(path_0)
 files_1 = os.listdir(path_1)
@@ -22,8 +22,9 @@ files_4 = os.listdir(path_4)
 
 
 for i, name in enumerate(files_0):
+#     os.rename(os.path.join(path_0, name), os.path.join(path_0, name.split('_')[1]))
     os.rename(os.path.join(path_0, name), os.path.join(path_0, string + name))
-
+ 
 for i, name in enumerate(files_1):
     os.rename(os.path.join(path_1, name), os.path.join(path_1, string + name))
 

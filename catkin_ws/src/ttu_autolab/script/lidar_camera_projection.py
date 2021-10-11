@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 
 
 def lidar_projection(png_in_dir, bin_in_dir, calib_file_path):
-    dir_out_rgb = '../output/lidar_rgb'
+    dir_out_rgb = '../output/day_fair/sq12/lidar_rgb'
     if not os.path.exists(dir_out_rgb):
         os.mkdir(dir_out_rgb)
 
-    dir_out_blank = '../output/lidar_blank'
+    dir_out_blank = '../output/day_fair/sq12/lidar_blank'
     if not os.path.exists(dir_out_blank):
         os.mkdir(dir_out_blank)
 
@@ -26,8 +26,16 @@ def lidar_projection(png_in_dir, bin_in_dir, calib_file_path):
     for _, j in enumerate(png_file_list):
         rgb = cv2.cvtColor(cv2.imread(os.path.join(png_in_dir, j)),
                            cv2.COLOR_BGR2RGB)
-        pts_lidar = load_lidar_bin(os.path.join(
-                                bin_in_dir, j.replace('.png', '.bin')))[:, :3]
+
+        # This is for selecting previous lidar frame to mathch current camera
+        # frame for better point-image alignment. 
+        rgb_sq_num = int(j.split('.')[0])
+        rgb_sq_num_minus_one = rgb_sq_num - 1
+        zero_fill_front = str(rgb_sq_num_minus_one).zfill(6)
+        pts_lidar = load_lidar_bin(os.path.join(bin_in_dir, (zero_fill_front + '.bin')))[:, :3]
+
+#         pts_lidar = load_lidar_bin(os.path.join(
+#                                 bin_in_dir, j.replace('.png', '.bin')))[:, :3]
         rgb_proj, blank_proj = render_lidar_on_image(pts_lidar, rgb, calib)
 
         plt.imsave(os.path.join(dir_out_rgb, j), rgb_proj)

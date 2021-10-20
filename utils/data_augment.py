@@ -23,9 +23,6 @@ from utils.lidar_process import open_lidar
 
 class TopCrop(object):
     def __init__(self, image_path, annotation_path, lidar_path):
-        # self.image_path = image_path
-        # self.annotation_path = annotation_path
-        # self.lidar_path = lidar_path
         self.rgb = Image.open(image_path)
         self.annotation = Image.open(annotation_path).convert('F')
         self.annotation = self.prepare_annotation(self.annotation)

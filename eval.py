@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 import configs
 from fcn.fusion_net import FusionNet
 from fcn.dataloader import Dataset
+from fcn.iseauto_dataloader import IseautoDataset
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
 
@@ -21,11 +22,18 @@ from utils.metrics import auc_ap
 parser = argparse.ArgumentParser(description='Model Evaluation')
 parser.add_argument('-p', '--model_path', dest='model_path',
                     help='path of checkpoint for evaluation')
+parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
+                    help='select to evaluate waymo or iseauto dataset')
 args = parser.parse_args()
 
-eval_dataset = Dataset(dataroot=configs.DATAROOT,
-                       split=configs.EVAL_SPLITS,
-                       augment=None)
+if args.dataset == 'waymo':
+    eval_dataset = Dataset(dataroot=configs.DATAROOT,
+                           split=configs.EVAL_SPLITS,
+                           augment=None)
+elif args.dataset == 'iseauto':
+    eval_dataset = IseautoDataset(dataroot=configs.ISE_DATAROOT,
+                                  split=configs.ISE_EVAL_SPLITS,
+                                  augment=None)
 eval_loader = DataLoader(eval_dataset,
                          batch_size=configs.BATCH_SIZE,
                          num_workers=configs.WORKERS,
@@ -62,7 +70,7 @@ with torch.no_grad():
             batch['annotation'].to(device, non_blocking=True).squeeze(1)
 
         outputs = model(batch['rgb'], batch['lidar'], 'all')
-        outputs = outputs['fusion']
+        outputs = outputs['lidar']
 
         annotation = batch['annotation']
 

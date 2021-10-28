@@ -6,14 +6,14 @@ Configurations of model training and validation
 Created on May 12nd, 2021
 '''
 # Waymo dataset
-DATAROOT = '/home/claude/Data/mauro_waymo'
+ROOTPATH = '/home/claude/Data/mauro_waymo'
 LOG_DIR = '/media/storage/data/fusion_logs/phase_0_train_by_all/'  # Path to save checkpoints
 TRAIN_SPLITS = 'train_all'  # training split file name (.txt file)
 VALID_SPLITS = 'early_stop_valid'  # Validation(while training) split file name
 EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 
 # iseAuto dataset
-ISE_DATAROOT = '/home/claude/Data/claude_iseauto'
+ISE_ROOTPATH = '/home/claude/Data/claude_iseauto'
 ISE_EVAL_SPLITS = 'day_fair_eval'
 
 # Data augment configurations
@@ -23,6 +23,8 @@ ROTATE_RANGE = 20  # rotate range (-20, 20)
 JITTER_PARAM = [0.4, 0.4, 0.4, 0.1]  # [brightness, contrast, saturation, hue]
 
 # Waymo Data normalization
+# LIDAR_MEAN = [-0.17263354, 0.85321806, 19.5527253] ## [Z, X, Y]
+# LIDAR_STD = [3.34546552, 1.17227659, 10.83745082]
 LIDAR_MEAN = [-0.17263354, 0.85321806, 24.5527253]
 LIDAR_STD = [7.34546552, 1.17227659, 15.83745082]
 
@@ -30,11 +32,13 @@ IMAGE_MEAN = [0.485, 0.456, 0.406]
 IMAGE_STD = [0.229, 0.224, 0.225]
 
 # iseAuto Data normalization
-ISE_LIDAR_MEAN = [0.5, 0.5, 0.5]
-ISE_LIDAR_STD = [0.5, 0.5, 0.5]
+# ISE_LIDAR_MEAN = [-0.17263354, 0.85321806, 19.5527253] ## [Z, X, Y]
+# ISE_LIDAR_STD = [3.34546552, 1.17227659, 10.83745082]
+ISE_LIDAR_MEAN = [-0.07983014,  0.44271413, 22.21995256]
+ISE_LIDAR_STD = [11.78805485,  3.04599288, 16.09565087]
 
-ISE_IMAGE_MEAN = [0.5, 0.5, 0.5]
-ISE_IMAGE_STD = [0.5, 0.5, 0.5]
+ISE_IMAGE_MEAN = [0.485, 0.456, 0.406]
+ISE_IMAGE_STD = [0.229, 0.224, 0.225]
 
 DEVICE = 'cuda:0'  # 'cpu' for CPU training. Default ID for GPU is :0
 CLASS_TOTAL = 4  # number of classes

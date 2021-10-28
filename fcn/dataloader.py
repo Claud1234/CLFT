@@ -6,6 +6,7 @@ Dataloader python script
 Created on May 13rd, 2021
 '''
 import os
+import sys
 import random
 import numpy as np
 
@@ -20,9 +21,10 @@ from utils.data_augment import AugmentShuffle
 
 
 class Dataset():
-    def __init__(self, dataroot, split, augment):
+    def __init__(self, dataset, rootpath, split, augment):
         np.random.seed(789)
-        self.dataroot = dataroot
+        self.dataset = dataset
+        self.rootpath = rootpath
         self.split = split
         self.augment = augment
         self.augment_shuffle = configs.AUGMENT_SHUFFLE
@@ -31,7 +33,7 @@ class Dataset():
                                                   std=configs.IMAGE_STD)
 
         list_examples_file = open(os.path.join(
-                                dataroot, 'splits', split + '.txt'), 'r')
+                                rootpath, 'splits', split + '.txt'), 'r')
         self.list_examples_cam = np.array(
                                         list_examples_file.read().splitlines())
         list_examples_file.close()
@@ -40,10 +42,21 @@ class Dataset():
         return len(self.list_examples_cam)
 
     def __getitem__(self, idx):
-        cam_path = os.path.join(self.dataroot, self.list_examples_cam[idx])
-        annotation_path = cam_path.replace('/camera', '/annotation')
-        lidar_path = cam_path.replace('/camera', '/lidar').\
-            replace('.png', '.pkl')
+        if self.dataset == 'waymo':
+            cam_path = os.path.join(self.rootpath, self.list_examples_cam[idx])
+            annotation_path = cam_path.replace('/camera', '/annotation')
+            lidar_path = cam_path.replace('/camera', '/lidar').\
+                replace('.png', '.pkl')
+
+        elif self.dataset == 'iseauto':
+            cam_path = os.path.join(self.rootpath, self.list_examples_cam[idx])
+            annotation_path = cam_path.replace('/rgb', '/annotation_gray')
+            lidar_path = cam_path.replace('/rgb', '/pkl').\
+                replace('.png', '.pkl')
+
+        else:
+            print("Error! Check the dataset arg, either 'waymo' or 'iseauto")
+            sys.exit()
 
         rgb_name = cam_path.split('/')[-1].split('.')[0]
         ann_name = annotation_path.split('/')[-1].split('.')[0]
@@ -51,7 +64,8 @@ class Dataset():
         assert (rgb_name == lidar_name)
         assert (ann_name == lidar_name)
 
-        top_crop_class = TopCrop(cam_path, annotation_path, lidar_path)
+        top_crop_class = TopCrop(self.dataset, cam_path,
+                                 annotation_path, lidar_path)
         # Apply top crop for raw data to crop the 1/2 top of the images
         top_crop_rgb, top_crop_anno,\
             top_crop_points_set,\

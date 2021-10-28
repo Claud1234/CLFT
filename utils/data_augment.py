@@ -22,12 +22,29 @@ from utils.lidar_process import open_lidar
 
 
 class TopCrop(object):
-    def __init__(self, image_path, annotation_path, lidar_path):
-        self.rgb = Image.open(image_path)
-        self.annotation = Image.open(annotation_path).convert('F')
-        self.annotation = self.prepare_annotation(self.annotation)
-        self.points_set, self.camera_coord = open_lidar(lidar_path)
+    def __init__(self, dataset, image_path, annotation_path, lidar_path):
+        if dataset == 'waymo':
+            self.rgb = Image.open(image_path)
+            self.annotation = Image.open(annotation_path).convert('F')
+            self.annotation = self.prepare_annotation(self.annotation)
+            self.points_set, self.camera_coord = open_lidar(
+                                                lidar_path,
+                                                w_ratio=4,
+                                                h_ratio=4,
+                                                lidar_mean=configs.LIDAR_MEAN,
+                                                lidar_std=configs.LIDAR_STD)
 
+        elif dataset == 'iseauto':
+            self.rgb = Image.open(image_path).resize((480, 320), Image.BICUBIC)
+            self.annotation = Image.open(annotation_path).\
+                resize((480, 320), Image.BICUBIC).convert('F')
+            self.annotation = TF.to_pil_image(np.array(self.annotation))
+            self.points_set, self.camera_coord = open_lidar(
+                                            lidar_path,
+                                            w_ratio=8.84,
+                                            h_ratio=8.825,
+                                            lidar_mean=configs.ISE_LIDAR_MEAN,
+                                            lidar_std=configs.ISE_LIDAR_STD)
     '''
     Cut the 1/2 top part of the image and lidar, applied before to all of
     augmentation operations

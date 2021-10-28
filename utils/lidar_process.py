@@ -12,9 +12,9 @@ import torchvision.transforms.functional as TF
 import configs
 
 
-def open_lidar(lidar_path):
-    mean_lidar = np.array(configs.LIDAR_MEAN)
-    std_lidar = np.array(configs.LIDAR_STD)
+def open_lidar(lidar_path, w_ratio, h_ratio, lidar_mean, lidar_std):
+    mean_lidar = np.array(lidar_mean)
+    std_lidar = np.array(lidar_std)
 
     file = open(lidar_path, 'rb')
     lidar_data = pickle.load(file)
@@ -32,8 +32,8 @@ def open_lidar(lidar_path):
     y_lid = (points3d[:, 2] - mean_lidar[1])/std_lidar[1]
     z_lid = (points3d[:, 0] - mean_lidar[2])/std_lidar[2]
 
-    camera_coord[:, 1] = (camera_coord[:, 1]/4).astype(int)
-    camera_coord[:, 0] = (camera_coord[:, 0]/4).astype(int)
+    camera_coord[:, 1] = (camera_coord[:, 1]/h_ratio).astype(int)
+    camera_coord[:, 0] = (camera_coord[:, 0]/w_ratio).astype(int)
 
     points_set = np.stack((x_lid, y_lid, z_lid), axis=1).astype(np.float32)
 

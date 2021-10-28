@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 import configs
 from fcn.fusion_net import FusionNet
 from fcn.dataloader import Dataset
-from fcn.iseauto_dataloader import IseautoDataset
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
 
@@ -27,13 +26,16 @@ parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
 args = parser.parse_args()
 
 if args.dataset == 'waymo':
-    eval_dataset = Dataset(dataroot=configs.DATAROOT,
+    eval_dataset = Dataset(dataset='waymo',
+                           rootpath=configs.ROOTPATH,
                            split=configs.EVAL_SPLITS,
                            augment=None)
 elif args.dataset == 'iseauto':
-    eval_dataset = IseautoDataset(dataroot=configs.ISE_DATAROOT,
-                                  split=configs.ISE_EVAL_SPLITS,
-                                  augment=None)
+    eval_dataset = Dataset(dataset='iseauto',
+                           rootpath=configs.ISE_ROOTPATH,
+                           split=configs.ISE_EVAL_SPLITS,
+                           augment=None)
+
 eval_loader = DataLoader(eval_dataset,
                          batch_size=configs.BATCH_SIZE,
                          num_workers=configs.WORKERS,
@@ -70,7 +72,7 @@ with torch.no_grad():
             batch['annotation'].to(device, non_blocking=True).squeeze(1)
 
         outputs = model(batch['rgb'], batch['lidar'], 'all')
-        outputs = outputs['lidar']
+        outputs = outputs['fusion']
 
         annotation = batch['annotation']
 

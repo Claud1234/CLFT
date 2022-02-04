@@ -29,7 +29,7 @@ data[..., :][human_areas.T] = (2, 2, 2)
 data[~(car_areas.T | human_areas.T)] = (0, 0, 0)
 
 im_gray = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
-anno_path = args.anno.replace('lidar_blank', 'annotation_gray')
+anno_path = args.anno.replace('annotation_rgb', 'annotation_gray')
 cv2.imwrite(anno_path, im_gray)
 
 # im1 = Image.fromarray(data)

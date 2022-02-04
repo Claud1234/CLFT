@@ -222,4 +222,3 @@ if __name__ == '__main__':
     # (currently we will just show the original image in grayscale)
     cv2.imshow(img_rgb_path, image_rgb)
     show_image_wait_input_draw(args.image, image_blank)
-

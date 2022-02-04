@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
-Script to project lidar points to rgb images and blank images,
-create lidar_image that background is rgb images and blank-black images.
-Single thread process, slow
+Script to project lidar points to rgb images, create lidar_image.
+create lidar_image that background is rgb image
+multi-threads process, fast.
 '''
 import os
 import sys
@@ -11,44 +11,14 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-def lidar_projection(png_in_dir, bin_in_dir, calib_file_path):
-    name_prefix = 'sq05'
-    dir_out_rgb = '../output/day_fair/sq12/lidar_rgb'
-    if not os.path.exists(dir_out_rgb):
-        os.mkdir(dir_out_rgb)
-
-    dir_out_blank = '../output/day_fair/sq12/lidar_blank'
-    if not os.path.exists(dir_out_blank):
-        os.mkdir(dir_out_blank)
-
-    png_file_list = np.array(os.listdir(png_in_dir))
-#    bin_list = np.array(os.listdir(bin_in_dir))
-    calib = read_calib_file(calib_file_path)
-
-    for _, j in enumerate(png_file_list):
-        rgb = cv2.cvtColor(cv2.imread(os.path.join(png_in_dir, j)),
-                           cv2.COLOR_BGR2RGB)
-
-        # This is for selecting previous lidar frame to mathch current camera
-        # frame for better point-image alignment.
-        rgb_sq_num = int(j.split('.')[0])
-        rgb_sq_num_minus_one = rgb_sq_num - 1
-        zero_fill_front = str(rgb_sq_num_minus_one).zfill(6)
-        pts_lidar = load_lidar_bin(os.path.join(
-            bin_in_dir, (name_prefix + zero_fill_front + '.bin')))[:, :3]
-
-#         pts_lidar = load_lidar_bin(os.path.join(
-#                                 bin_in_dir, j.replace('.png', '.bin')))[:, :3]
-        rgb_proj, blank_proj = render_lidar_on_image(pts_lidar, rgb, calib)
-
-        plt.imsave(os.path.join(dir_out_rgb, j), rgb_proj)
-        plt.imsave(os.path.join(dir_out_blank, j), blank_proj)
+from multiprocessing import Pool
+from multiprocessing import cpu_count
+from imutils import paths
 
 
 def render_lidar_on_image(pts_lidar, rgb, calib):
     img_h, img_w, img_c = rgb.shape
-    blackblankimage = np.zeros(shape=[img_h, img_w, img_c], dtype=np.uint8)
+    # blackblankimage = np.zeros(shape=[img_h, img_w, img_c], dtype=np.uint8)
 
     # projection matrix (project from velo2cam2)
     proj_velo2cam2 = project_velo_to_cam2(calib)
@@ -80,11 +50,10 @@ def render_lidar_on_image(pts_lidar, rgb, calib):
         cv2.circle(rgb, (int(np.round(imgfov_pc_pixel[0, i])),
                          int(np.round(imgfov_pc_pixel[1, i]))),
                    2, color=tuple(color), thickness=5)
-        cv2.circle(blackblankimage, (int(np.round(imgfov_pc_pixel[0, i])),
-                                     int(np.round(imgfov_pc_pixel[1, i]))),
-                   2, color=tuple(color), thickness=5)
-
-    return rgb, blackblankimage
+        # cv2.circle(blackblankimage, (int(np.round(imgfov_pc_pixel[0, i])),
+        #                             int(np.round(imgfov_pc_pixel[1, i]))),
+        #           2, color=tuple(color), thickness=5)
+    return rgb
 
 
 def project_velo_to_cam2(calib):
@@ -141,8 +110,77 @@ def project_to_image(points, proj_mat):
     return points[:2, :]
 
 
+def chunk(l, n):
+    # loop over the list in n-sized chunks
+    for i in range(0, len(l), n):
+        # yield the current n-sized chunk to the calling function
+        yield l[i: i + n]
+
+
+def process(payload):
+    print("[INFO] starting process {}".format(payload["id"]))
+
+    for single_img_path in payload['input_path']:
+        rgb = cv2.cvtColor(cv2.imread(single_img_path), cv2.COLOR_BGR2RGB)
+
+        rgb_sq_num = int(single_img_path.split('_')[1].split('.')[0])
+        rgb_sq_num_minus_one = rgb_sq_num-1
+        zero_fill_front = str(rgb_sq_num_minus_one).zfill(6)
+        pts_lidar = load_lidar_bin(
+            os.path.join(sys.argv[2],
+                         ('sq06_' + zero_fill_front + '.bin')))[:, :3]
+        calib = payload['calib']
+
+        rgb_proj = render_lidar_on_image(pts_lidar, rgb, calib)
+        plt.imsave(single_img_path.replace('/png', '/lidar_rgb_-1_frame'), rgb)
+
+    print("[INFO] process {} serializing hashes".format(payload["id"]))
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print('Input .png and .bin directories and calib file path required!')
         sys.exit(1)
-    lidar_projection(sys.argv[1], sys.argv[2], sys.argv[3])
+
+    dir_out_rgb = '/media/claude/256G/sq06/lidar_rgb_-1_frame'
+    if not os.path.exists(dir_out_rgb):
+        os.mkdir(dir_out_rgb)
+
+    # determine the number of concurrent processes to launch when
+    # distributing the load across the system, then create the list
+    # of process IDs
+    procs = cpu_count()
+    procIDs = list(range(0, procs))
+    # grab the paths to the input images, then determine the number
+    # of images each process will handle
+    print("[INFO] grabbing image paths...")
+    allImagePaths = sorted(list(paths.list_images(sys.argv[1])))
+    numImagesPerProc = len(allImagePaths) / float(procs)
+    numImagesPerProc = int(np.ceil(numImagesPerProc))
+
+    # chunk the image paths into N (approximately) equal sets, one
+    # set of image paths for each individual process
+    chunkedPaths = list(chunk(allImagePaths, numImagesPerProc))
+
+#    png_file_list = np.array(os.listdir(png_in_dir))
+#    bin_list = np.array(os.listdir(bin_in_dir))
+    calib = read_calib_file(sys.argv[3])
+    payloads = []
+
+    for i, j in enumerate(chunkedPaths):
+
+            data = {'id': i,
+                    'calib': calib,
+                    'input_path': j
+                    }
+            payloads.append(data)
+
+    # construct and launch the processing pool
+    print("[INFO] launching pool using {} processes...".format(procs))
+    pool = Pool(processes=procs)
+    pool.map(process, payloads)
+    # close the pool and wait for all processes to finish
+    print("[INFO] waiting for processes to finish...")
+    pool.close()
+    pool.join()
+    print("[INFO] multiprocessing complete")

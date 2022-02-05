@@ -16,7 +16,7 @@ label_colors_list = [
         (255, 0, 0),
         (0, 255, 0),
         (0, 0, 255),
-        (255, 255, 255)]
+        (100, 100, 100)]
 
 # all the classes that are present in the dataset
 ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
@@ -29,8 +29,8 @@ class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
 def draw_test_segmentation_map(outputs):
-    labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
-    # labels = outputs.detach().cpu().numpy()
+    #labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
+    labels = outputs.squeeze().detach().cpu().numpy()
     red_map = np.zeros_like(labels).astype(np.uint8)
     green_map = np.zeros_like(labels).astype(np.uint8)
     blue_map = np.zeros_like(labels).astype(np.uint8)
@@ -64,9 +64,14 @@ def save_model_dict(epoch, model, optimizer):
                logdir+f"checkpoint_{epoch}.pth")
 
 
-def adjust_learning_rate(optimizer, epoch, epoch_max):
+def adjust_learning_rate(model, optimizer, epoch, epoch_max):
     """Decay the learning rate based on schedule"""
-    lr = configs.LR * (1 - epoch/epoch_max)**0.9
+    if model == 'rgb':
+        lr = configs.LR_RGB * (1 - epoch/epoch_max)**0.9
+    elif model == 'lidar':
+        lr = configs.LR_LIDAR * (1 - epoch/epoch_max)**0.9
+    elif model == 'fusion':
+        lr = configs.LR_FUSION * (1 - epoch/epoch_max)**0.9
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -97,14 +102,14 @@ class EarlyStopping():
     def __call__(self, valid_param, epoch, model, optimizer):
         if self.min_param is None:
             self.min_param = valid_param
-        elif valid_param < self.min_param:
+        elif valid_param > self.min_param:
             self.count += 1
             print(f'Early Stopping Counter: {self.count} of {self.patience}')
             if self.count >= self.patience:
                 self.early_stop_trigger = True
                 print('Early Stopping Triggered!')
         else:
-            print(f'Validation IoU increased from {self.min_param:.4f} ' +
+            print(f'Validation Loss decreased from {self.min_param:.4f} ' +
                   f'to {valid_param:.4f}')
             self.min_param = valid_param
             save_model_dict(epoch, model, optimizer)

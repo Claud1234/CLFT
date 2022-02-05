@@ -22,8 +22,15 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('-r', '--resume_training', required=True,
                     dest='resume_training', choices=['yes', 'no'],
                     help='Training resuming or starting from the beginning')
+parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
+                    help='Reset LR to initial value defined in configs')
 parser.add_argument('-p', '--model_path', dest='model_path',
                     help='path of checkpoint for training resuming')
+parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
+                    help='select to evaluate waymo or iseauto dataset')
+parser.add_argument('-m', '--model', dest='model', required=True,
+                    choices=['rgb', 'lidar', 'fusion'],
+                    help='Define training modes. (rgb, lidar or fusion)')
 args = parser.parse_args()
 
 # if os.path.exists('runs'):
@@ -43,19 +50,31 @@ def main():
 
     # Define loss function (criterion) and optimizer
     weight_loss = torch.Tensor(configs.CLASS_TOTAL).fill_(0)
+#    weight_loss[3] = 1
     weight_loss[0] = 1
     weight_loss[1] = 3
     weight_loss[2] = 10
     criterion = nn.CrossEntropyLoss(weight=weight_loss).to(device)
     print('Criterion Initialization Succeed')
-    optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR)
+    if args.model == 'rgb':
+        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_RGB)
+    elif args.model == 'lidar':
+        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_LIDAR)
+    elif args.model == 'fusion':
+        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_FUSION)
+    else:
+        sys.exit("You have to specify a training mode.(rgb, lidar or fusion)")
     print('Optimizer Initialization Succeed')
 
     if args.resume_training == 'yes':
         print('Resume Training')
         checkpoint = torch.load(args.model_path)
-        finsihed_epochs = checkpoint['epoch']
-        print(f"Finsihed epochs in previous training: {finsihed_epochs}")
+        if args.reset_lr is True:
+            print('Reset the epoch to 0')
+            finsihed_epochs = 0
+        else:
+            finsihed_epochs = checkpoint['epoch']
+            print(f"Finsihed epochs in previous training: {finsihed_epochs}")
         if configs.EPOCHS <= finsihed_epochs:
             print('Present epochs amount is smaller than finished epochs!!!')
             print(f"Please setting the epochs bigger than {finsihed_epochs}")
@@ -69,9 +88,16 @@ def main():
         print('Training from the beginning')
         finsihed_epochs = 0
 
-    train_dataset = Dataset(dataroot=configs.DATAROOT,
-                            split=configs.TRAIN_SPLITS,
-                            augment=True)
+    if args.dataset == 'waymo':
+        train_dataset = Dataset(dataset=args.dataset,
+                                rootpath=configs.WAY_ROOTPATH,
+                                split=configs.WAY_TRAIN_SPLITS,
+                                augment=True)
+    elif args.dataset == 'iseauto':
+        train_dataset = Dataset(dataset=args.dataset,
+                                rootpath=configs.ISE_ROOTPATH,
+                                split=configs.ISE_TRAIN_SPLITS,
+                                augment=True)
     train_loader = DataLoader(train_dataset,
                               batch_size=configs.BATCH_SIZE,
                               num_workers=configs.WORKERS,
@@ -79,9 +105,16 @@ def main():
                               pin_memory=True,
                               drop_last=True)
 
-    valid_dataset = Dataset(dataroot=configs.DATAROOT,
-                            split=configs.VALID_SPLITS,
-                            augment=None)
+    if args.dataset == 'waymo':
+        valid_dataset = Dataset(dataset=args.dataset,
+                                rootpath=configs.WAY_ROOTPATH,
+                                split=configs.WAY_VALID_SPLITS,
+                                augment=None)
+    elif args.dataset == 'iseauto':
+        valid_dataset = Dataset(dataset=args.dataset,
+                                rootpath=configs.ISE_ROOTPATH,
+                                split=configs.ISE_VALID_SPLITS,
+                                augment=None)
     valid_loader = DataLoader(valid_dataset,
                               batch_size=configs.BATCH_SIZE,
                               num_workers=configs.WORKERS,
@@ -90,9 +123,10 @@ def main():
                               drop_last=True)
 
     for epoch in range(finsihed_epochs, configs.EPOCHS):
-        curr_lr = adjust_learning_rate(optimizer, epoch, configs.EPOCHS)
+        curr_lr = adjust_learning_rate(args.model, optimizer,
+                                       epoch, configs.EPOCHS)
         # One epoch training
-        train_epoch_loss_rgb, train_epoch_IoU = train(
+        train_epoch_loss, train_epoch_IoU = train(
                                             train_dataset=train_dataset,
                                             train_loader=train_loader,
                                             model=model,
@@ -100,14 +134,14 @@ def main():
                                             optimizer=optimizer,
                                             epoch=epoch, lr=curr_lr)
         # One epoch validating
-        valid_epoch_loss_rgb, valid_epoch_IoU = validate(
+        valid_epoch_loss, valid_epoch_IoU = validate(
                                             valid_dataset=valid_dataset,
                                             valid_loader=valid_loader,
                                             model=model, criterion=criterion,
                                             epoch=epoch)
         # Plot the train and validation loss in Tensorboard
-        writer.add_scalars('Loss', {'train': train_epoch_loss_rgb,
-                                    'valid': valid_epoch_loss_rgb}, epoch)
+        writer.add_scalars('Loss', {'train': train_epoch_loss,
+                                    'valid': valid_epoch_loss}, epoch)
         # Plot the train and validation IoU in Tensorboard
         writer.add_scalars('Vehicle_IoU',
                            {'train': train_epoch_IoU[0],
@@ -119,7 +153,7 @@ def main():
 
         # Save the checkpoint
         if configs.EARLY_STOPPING is True:
-            early_stopping(valid_epoch_IoU[0], epoch, model, optimizer)
+            early_stopping(valid_epoch_loss, epoch, model, optimizer)
             if early_stopping.early_stop_trigger is True:
                 break
         else:
@@ -137,7 +171,7 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
     model.train()
     print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
     print('Training...')
-    train_loss_rgb = 0.0
+    train_loss = 0.0
     overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
     batches_amount = int(len(train_dataset)/configs.BATCH_SIZE)
     progress_bar = tqdm(train_loader, total=batches_amount)
@@ -152,7 +186,7 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
         optimizer.zero_grad()
         outputs = model(batch['rgb'], batch['lidar'], 'all')
 
-        output = outputs['fusion']
+        output = outputs[args.model]
         annotation = batch['annotation']
         batch_overlap, batch_pred, batch_label, batch_union = \
             find_overlap(output, annotation)
@@ -167,23 +201,32 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
         loss_fusion = criterion(outputs['fusion'], batch['annotation'])
         loss = loss_rgb + loss_lidar + loss_fusion
 
-        train_loss_rgb += loss_rgb.item()
+        if args.model == 'rgb':
+            train_loss += loss_rgb.item()
+            loss_rgb.backward()
+            optimizer.step()
+            progress_bar.set_description(f'train rgb loss:{loss_rgb:.4f}')
 
-        loss.backward()
-        optimizer.step()
+        elif args.model == 'lidar':
+            train_loss += loss_lidar.item()
+            loss_lidar.backward()
+            optimizer.step()
+            progress_bar.set_description(f'train lidar loss:{loss_lidar:.4f}')
 
-        progress_bar.set_description(f'rgb loss:{loss_rgb:.4f}, ' +
-                                     f'lidar loss:{loss_lidar:.4f}, ' +
-                                     f'fusion loss:{loss_fusion:.4f},')
+        elif args.model == 'fusion':
+            train_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+            progress_bar.set_description(f'train fusion loss:{loss:.4f}')
     # The IoU of one epoch
     train_epoch_IoU = overlap_cum / union_cum
     print(f'Training IoU of vehicles for Epoch: {train_epoch_IoU[0]:.4f}')
     print(f'Training IoU of human for Epoch: {train_epoch_IoU[1]:.4f}')
     # The loss_rgb of one epoch
-    train_epoch_loss_rgb = train_loss_rgb / count
-    print(f'Average Training RGB Loss for Epoch: {train_epoch_loss_rgb:.4f}')
+    train_epoch_loss = train_loss / count
+    print(f'Average Training Fusion Loss for Epoch: {train_epoch_loss:.4f}')
 
-    return train_epoch_loss_rgb, train_epoch_IoU
+    return train_epoch_loss, train_epoch_IoU
 
 
 def validate(valid_dataset, valid_loader, model, criterion, epoch):
@@ -192,7 +235,7 @@ def validate(valid_dataset, valid_loader, model, criterion, epoch):
     '''
     model.eval()
     print('Validating...')
-    valid_loss_rgb = 0.0
+    valid_loss = 0.0
     overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
     with torch.no_grad():
         batches_amount = int(len(valid_dataset)/configs.BATCH_SIZE)
@@ -207,7 +250,7 @@ def validate(valid_dataset, valid_loader, model, criterion, epoch):
 
             outputs = model(batch['rgb'], batch['lidar'], 'all')
 
-            output = outputs['fusion']
+            output = outputs[args.model]
             annotation = batch['annotation']
             batch_overlap, batch_pred, batch_label, batch_union = \
                 find_overlap(output, annotation)
@@ -220,22 +263,29 @@ def validate(valid_dataset, valid_loader, model, criterion, epoch):
             loss_rgb = criterion(outputs['rgb'], batch['annotation'])
             loss_lidar = criterion(outputs['lidar'], batch['annotation'])
             loss_fusion = criterion(outputs['fusion'], batch['annotation'])
-            # loss = loss_rgb + loss_lidar + loss_fusion
+            loss = loss_rgb + loss_lidar + loss_fusion
 
-            valid_loss_rgb += loss_rgb.item()
+            if args.model == 'rgb':
+                valid_loss += loss_rgb.item()
+                progress_bar.set_description(f'valid rgb loss:{loss_rgb:.4f}')
 
-            progress_bar.set_description(f'rgb loss:{loss_rgb:.4f}, ' +
-                                         f'lidar loss:{loss_lidar:.4f}, ' +
-                                         f'fusion loss:{loss_fusion:.4f},')
+            elif args.model == 'lidar':
+                valid_loss += loss_lidar.item()
+                progress_bar.set_description(
+                    f'valid lidar loss:{loss_lidar:.4f}')
+
+            elif args.model == 'fusion':
+                valid_loss += loss.item()
+                progress_bar.set_description(f'valid fusion loss:{loss:.4f}')
     # The IoU of one epoch
     valid_epoch_IoU = overlap_cum / union_cum
     print(f'Validatoin IoU of vehicles for Epoch: {valid_epoch_IoU[0]:.4f}')
     print(f'Validatoin IoU of human for Epoch: {valid_epoch_IoU[1]:.4f}')
     # The loss_rgb of one epoch
-    valid_epoch_loss_rgb = valid_loss_rgb / count
-    print(f'Average Validation RGB Loss for Epoch: {valid_epoch_loss_rgb:.4f}')
+    valid_epoch_loss = valid_loss / count
+    print(f'Average Validation Fusion Loss for Epoch: {valid_epoch_loss:.4f}')
 
-    return valid_epoch_loss_rgb, valid_epoch_IoU
+    return valid_epoch_loss, valid_epoch_IoU
 
 
 if __name__ == '__main__':

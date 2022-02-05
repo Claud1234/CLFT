@@ -5,6 +5,7 @@ Model evaluation python script
 
 Created on June 5th, 2021
 '''
+import sys
 import torch
 import argparse
 import numpy as np
@@ -23,18 +24,23 @@ parser.add_argument('-p', '--model_path', dest='model_path',
                     help='path of checkpoint for evaluation')
 parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
                     help='select to evaluate waymo or iseauto dataset')
+parser.add_argument('-m', '--model', dest='model', required=True,
+                    choices=['rgb', 'lidar', 'fusion'],
+                    help='Define training modes. (rgb, lidar or fusion)')
 args = parser.parse_args()
 
 if args.dataset == 'waymo':
     eval_dataset = Dataset(dataset='waymo',
-                           rootpath=configs.ROOTPATH,
-                           split=configs.EVAL_SPLITS,
+                           rootpath=configs.WAY_ROOTPATH,
+                           split=configs.WAY_EVAL_SPLITS,
                            augment=None)
 elif args.dataset == 'iseauto':
     eval_dataset = Dataset(dataset='iseauto',
                            rootpath=configs.ISE_ROOTPATH,
                            split=configs.ISE_EVAL_SPLITS,
                            augment=None)
+else:
+    sys.exit('You have to specify dataset (waymo or iseauto)')
 
 eval_loader = DataLoader(eval_dataset,
                          batch_size=configs.BATCH_SIZE,
@@ -72,7 +78,7 @@ with torch.no_grad():
             batch['annotation'].to(device, non_blocking=True).squeeze(1)
 
         outputs = model(batch['rgb'], batch['lidar'], 'all')
-        outputs = outputs['fusion']
+        outputs = outputs[args.model]
 
         annotation = batch['annotation']
 

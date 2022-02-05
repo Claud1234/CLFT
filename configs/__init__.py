@@ -15,8 +15,8 @@ WAY_EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 
 # iseAuto dataset
 ISE_ROOTPATH = '/home/claude/Data/claude_iseauto'
-ISE_TRAIN_SPLITS = 'train_all'
-ISE_SEMI_TRAIN_SPLITS = ''
+ISE_TRAIN_SPLITS = 'train_all_labeled'
+ISE_SEMI_TRAIN_SPLITS = 'train_all_unlabeled'
 ISE_VALID_SPLITS = 'early_stop_valid'
 ISE_EVAL_SPLITS = 'night_rain_eval'
 
@@ -54,9 +54,9 @@ LR_FUSION = 0.00009
 
 
 EPOCHS_SEMI = 1500  # number of total epochs for semi-supervised training
-LR_SEMI_RGB = 0.00003
-LR_SEMI_LIDAR = 0.00003
-LR_SEMI_FUSION = 0.00003
+LR_SEMI_RGB = 0.00007
+LR_SEMI_LIDAR = 0.00007
+LR_SEMI_FUSION = 0.00007
 
 # Early stopping
 EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working

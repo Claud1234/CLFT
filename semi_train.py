@@ -15,6 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import configs
 from fcn.dataloader import Dataset
+from fcn.dataloader import SemiDataset
 from fcn.fusion_net import FusionNet
 from utils.helpers import adjust_learning_rate_semi
 from utils.helpers import save_model_dict
@@ -27,7 +28,7 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 #                     help='Training resuming or starting from the beginning')
 # parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
 #                     help='Reset LR to initial value defined in configs')
-parser.add_argument('-p', '--model_path', dest='model_path',
+parser.add_argument('-p', '--model_path', dest='model_path', required=True,
                     help='path of checkpoint for training resuming')
 # parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
 #                     help='select to evaluate waymo or iseauto dataset')
@@ -97,10 +98,9 @@ def main():
 #                                 split=configs.WAY_TRAIN_SPLITS,
 #                                 augment=True)
 #     elif args.dataset == 'iseauto':
-    semi_train_dataset = Dataset(dataset='iseauto',
-                                 rootpath=configs.ISE_ROOTPATH,
-                                 split=configs.ISE_SEMI_TRAIN_SPLITS,
-                                 augment=True)
+    semi_train_dataset = SemiDataset(rootpath=configs.ISE_ROOTPATH,
+                                     split=configs.ISE_SEMI_TRAIN_SPLITS,
+                                     augment=True)
     semi_train_loader = DataLoader(semi_train_dataset,
                                    batch_size=configs.BATCH_SIZE,
                                    num_workers=configs.WORKERS,
@@ -172,6 +172,8 @@ def semi_train(train_dataset, train_loader, model,
     '''
     The semi-training of one epoch
     '''
+    print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
+    print('Semi-supervised training...')
     train_loss = 0.0
     overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
     batches_amount = int(len(train_dataset)/configs.BATCH_SIZE)
@@ -191,9 +193,6 @@ def semi_train(train_dataset, train_loader, model,
             _, annotation_teacher = torch.max(annotation_teacher, 1)
 
         model.train()
-        print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
-        print('Semi-supervised training...')
-
         optimizer.zero_grad()
         outputs = model(batch['rgb'], batch['lidar'], 'all')
 

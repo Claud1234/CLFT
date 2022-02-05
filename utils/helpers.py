@@ -29,8 +29,8 @@ class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
 def draw_test_segmentation_map(outputs):
-    #labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
-    labels = outputs.squeeze().detach().cpu().numpy()
+    labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
+    # labels = outputs.squeeze().detach().cpu().numpy()
     red_map = np.zeros_like(labels).astype(np.uint8)
     green_map = np.zeros_like(labels).astype(np.uint8)
     blue_map = np.zeros_like(labels).astype(np.uint8)
@@ -79,12 +79,22 @@ def adjust_learning_rate(model, optimizer, epoch, epoch_max):
     return lr
 
 
-def adjust_learning_rate_semi(optimizer, epoch, epoch_max, args):
+def adjust_learning_rate_semi(model, optimizer, epoch, epoch_max):
     mid_epoch = epoch_max/2
     if epoch <= mid_epoch:
-        lr = np.exp(-(1-epoch/mid_epoch)**2)*args.lrsemi
+        if model == 'rgb':
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_RGB
+        elif model == 'lidar':
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_LIDAR
+        elif model == 'fusion':
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_FUSION
     else:
-        lr = args.lrsemi * (1 - epoch/epoch_max)**0.9
+        if model == 'rgb':
+            lr = configs.LR_SEMI_RGB * (1 - epoch/epoch_max)**0.9
+        elif model == 'lidar':
+            lr = configs.LR_SEMI_LIDAR * (1 - epoch/epoch_max)**0.9
+        elif model == 'fusion':
+            lr = configs.LR_SEMI_FUSION * (1 - epoch/epoch_max)**0.9
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr

@@ -16,6 +16,7 @@ WAY_EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 # iseAuto dataset
 ISE_ROOTPATH = '/home/claude/Data/claude_iseauto'
 ISE_TRAIN_SPLITS = 'train_all'
+ISE_SEMI_TRAIN_SPLITS = ''
 ISE_VALID_SPLITS = 'early_stop_valid'
 ISE_EVAL_SPLITS = 'night_rain_eval'
 
@@ -44,7 +45,7 @@ CLASS_TOTAL = 4  # number of classes
 WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 16  # batch size
 
-EPOCHS = 1000  # number of total epochs to run
+EPOCHS = 1000  # number of total epochs for supervised training
 SAVE_EPOCH = 10  # save the checkpoint after these epochs if no early-stopping
 
 LR_RGB = 0.00009  # initial learning rate
@@ -52,8 +53,10 @@ LR_LIDAR = 0.00008
 LR_FUSION = 0.00009
 
 
-EPOCHS_COTRAIN = 200  # number of total epochs to run
-LR_SEMI = 0.00003
+EPOCHS_SEMI = 1500  # number of total epochs for semi-supervised training
+LR_SEMI_RGB = 0.00003
+LR_SEMI_LIDAR = 0.00003
+LR_SEMI_FUSION = 0.00003
 
 # Early stopping
 EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working

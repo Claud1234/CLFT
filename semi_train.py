@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+'''
+Semi-supervised training script
+
+Created on Feb. th, 2022
+'''
 import sys
-import shutil
 import argparse
 from tqdm import tqdm
 import torch.optim
@@ -13,28 +16,25 @@ from torch.utils.tensorboard import SummaryWriter
 import configs
 from fcn.dataloader import Dataset
 from fcn.fusion_net import FusionNet
-from utils.helpers import adjust_learning_rate
+from utils.helpers import adjust_learning_rate_semi
 from utils.helpers import save_model_dict
 from utils.helpers import EarlyStopping
 from utils.metrics import find_overlap
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('-r', '--resume_training', required=True,
-                    dest='resume_training', choices=['yes', 'no'],
-                    help='Training resuming or starting from the beginning')
-parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
-                    help='Reset LR to initial value defined in configs')
+# parser.add_argument('-r', '--resume_training', required=True,
+#                     dest='resume_training', choices=['yes', 'no'],
+#                     help='Training resuming or starting from the beginning')
+# parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
+#                     help='Reset LR to initial value defined in configs')
 parser.add_argument('-p', '--model_path', dest='model_path',
                     help='path of checkpoint for training resuming')
-parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
-                    help='select to evaluate waymo or iseauto dataset')
+# parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
+#                     help='select to evaluate waymo or iseauto dataset')
 parser.add_argument('-m', '--model', dest='model', required=True,
                     choices=['rgb', 'lidar', 'fusion'],
                     help='Define training modes. (rgb, lidar or fusion)')
 args = parser.parse_args()
-
-# if os.path.exists('runs'):
-#     shutil.rmtree('runs')
 
 device = torch.device(configs.DEVICE)
 writer = SummaryWriter()
@@ -57,64 +57,67 @@ def main():
     criterion = nn.CrossEntropyLoss(weight=weight_loss).to(device)
     print('Criterion Initialization Succeed')
     if args.model == 'rgb':
-        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_RGB)
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=configs.LR_SEMI_RGB)
     elif args.model == 'lidar':
-        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_LIDAR)
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=configs.LR_SEMI_LIDAR)
     elif args.model == 'fusion':
-        optimizer = torch.optim.Adam(model.parameters(), lr=configs.LR_FUSION)
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=configs.LR_SEMI_FUSION)
     else:
         sys.exit("You have to specify a training mode.(rgb, lidar or fusion)")
     print('Optimizer Initialization Succeed')
 
-    if args.resume_training == 'yes':
-        print('Resume Training')
-        checkpoint = torch.load(args.model_path)
-        if args.reset_lr is True:
-            print('Reset the epoch to 0')
-            finsihed_epochs = 0
-        else:
-            finsihed_epochs = checkpoint['epoch']
-            print(f"Finsihed epochs in previous training: {finsihed_epochs}")
-        if configs.EPOCHS <= finsihed_epochs:
-            print('Present epochs amount is smaller than finished epochs!!!')
-            print(f"Please setting the epochs bigger than {finsihed_epochs}")
-            sys.exit()
-        elif configs.EPOCHS > finsihed_epochs:
-            print('Loading trained model weights...')
-            model.load_state_dict(checkpoint['model_state_dict'])
-            print('Loading trained optimizer...')
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    elif args.resume_training == 'no':
-        print('Training from the beginning')
-        finsihed_epochs = 0
+#     if args.resume_training == 'yes':
+#         print('Resume Training')
+    checkpoint = torch.load(args.model_path)
+#         if args.reset_lr is True:
+#             print('Reset the epoch to 0')
+#             finsihed_epochs = 0
+#         else:
+#             finsihed_epochs = checkpoint['epoch']
+#             print(f"Finsihed epochs in previous training: {finsihed_epochs}")
+#         if configs.EPOCHS <= finsihed_epochs:
+#             print('Present epochs amount is smaller than finished epochs!!!')
+#             print(f"Please setting the epochs bigger than {finsihed_epochs}")
+#             sys.exit()
+#         elif configs.EPOCHS > finsihed_epochs:
+    print('Loading trained model weights...')
+    model.load_state_dict(checkpoint['model_state_dict'])
+    print('Loading trained optimizer...')
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+#     elif args.resume_training == 'no':
+#         print('Training from the beginning')
+#         finsihed_epochs = 0
 
-    if args.dataset == 'waymo':
-        train_dataset = Dataset(dataset=args.dataset,
-                                rootpath=configs.WAY_ROOTPATH,
-                                split=configs.WAY_TRAIN_SPLITS,
-                                augment=True)
-    elif args.dataset == 'iseauto':
-        train_dataset = Dataset(dataset=args.dataset,
-                                rootpath=configs.ISE_ROOTPATH,
-                                split=configs.ISE_TRAIN_SPLITS,
-                                augment=True)
-    train_loader = DataLoader(train_dataset,
-                              batch_size=configs.BATCH_SIZE,
-                              num_workers=configs.WORKERS,
-                              shuffle=True,
-                              pin_memory=True,
-                              drop_last=True)
+#     if args.dataset == 'waymo':
+#         train_dataset = Dataset(dataset=args.dataset,
+#                                 rootpath=configs.WAY_ROOTPATH,
+#                                 split=configs.WAY_TRAIN_SPLITS,
+#                                 augment=True)
+#     elif args.dataset == 'iseauto':
+    semi_train_dataset = Dataset(dataset='iseauto',
+                                 rootpath=configs.ISE_ROOTPATH,
+                                 split=configs.ISE_SEMI_TRAIN_SPLITS,
+                                 augment=True)
+    semi_train_loader = DataLoader(semi_train_dataset,
+                                   batch_size=configs.BATCH_SIZE,
+                                   num_workers=configs.WORKERS,
+                                   shuffle=True,
+                                   pin_memory=True,
+                                   drop_last=True)
 
-    if args.dataset == 'waymo':
-        valid_dataset = Dataset(dataset=args.dataset,
-                                rootpath=configs.WAY_ROOTPATH,
-                                split=configs.WAY_VALID_SPLITS,
-                                augment=None)
-    elif args.dataset == 'iseauto':
-        valid_dataset = Dataset(dataset=args.dataset,
-                                rootpath=configs.ISE_ROOTPATH,
-                                split=configs.ISE_VALID_SPLITS,
-                                augment=None)
+#     if args.dataset == 'waymo':
+#         valid_dataset = Dataset(dataset=args.dataset,
+#                                 rootpath=configs.WAY_ROOTPATH,
+#                                 split=configs.WAY_VALID_SPLITS,
+#                                 augment=None)
+#     elif args.dataset == 'iseauto':
+    valid_dataset = Dataset(dataset='iseauto',
+                            rootpath=configs.ISE_ROOTPATH,
+                            split=configs.ISE_VALID_SPLITS,
+                            augment=None)
     valid_loader = DataLoader(valid_dataset,
                               batch_size=configs.BATCH_SIZE,
                               num_workers=configs.WORKERS,
@@ -122,13 +125,13 @@ def main():
                               pin_memory=True,
                               drop_last=True)
 
-    for epoch in range(finsihed_epochs, configs.EPOCHS):
-        curr_lr = adjust_learning_rate(args.model, optimizer,
-                                       epoch, configs.EPOCHS)
+    for epoch in range(0, configs.EPOCHS_SEMI):
+        curr_lr = adjust_learning_rate_semi(args.model, optimizer,
+                                            epoch, configs.EPOCHS_SEMI)
         # One epoch training
-        train_epoch_loss, train_epoch_IoU = train(
-                                            train_dataset=train_dataset,
-                                            train_loader=train_loader,
+        train_epoch_loss, train_epoch_IoU = semi_train(
+                                            train_dataset=semi_train_dataset,
+                                            train_loader=semi_train_loader,
                                             model=model,
                                             criterion=criterion,
                                             optimizer=optimizer,
@@ -164,13 +167,11 @@ def main():
     print('Training Complete')
 
 
-def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
+def semi_train(train_dataset, train_loader, model,
+               criterion, optimizer, epoch, lr):
     '''
-    The training of one epoch
+    The semi-training of one epoch
     '''
-    model.train()
-    print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
-    print('Training...')
     train_loss = 0.0
     overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
     batches_amount = int(len(train_dataset)/configs.BATCH_SIZE)
@@ -180,14 +181,24 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
         count += 1
         batch['rgb'] = batch['rgb'].to(device, non_blocking=True)
         batch['lidar'] = batch['lidar'].to(device, non_blocking=True)
-        batch['annotation'] = \
-            batch['annotation'].to(device, non_blocking=True).squeeze(1)
+
+        with torch.no_grad():
+            model.eval()
+            outputs = model(batch['rgb'], batch['lidar'], 'all')
+            output = outputs[args.model]
+
+            annotation_teacher = nn.functional.softmax(output, 1)
+            _, annotation_teacher = torch.max(annotation_teacher, 1)
+
+        model.train()
+        print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
+        print('Semi-supervised training...')
 
         optimizer.zero_grad()
         outputs = model(batch['rgb'], batch['lidar'], 'all')
 
         output = outputs[args.model]
-        annotation = batch['annotation']
+        annotation = annotation_teacher.detach().clone()
         batch_overlap, batch_pred, batch_label, batch_union = \
             find_overlap(output, annotation)
 
@@ -196,35 +207,36 @@ def train(train_dataset, train_loader, model, criterion, optimizer, epoch, lr):
         label_cum += batch_label
         union_cum += batch_union
 
-        loss_rgb = criterion(outputs['rgb'], batch['annotation'])
-        loss_lidar = criterion(outputs['lidar'], batch['annotation'])
-        loss_fusion = criterion(outputs['fusion'], batch['annotation'])
+        loss_rgb = criterion(outputs['rgb'], annotation)
+        loss_lidar = criterion(outputs['lidar'], annotation)
+        loss_fusion = criterion(outputs['fusion'], annotation)
         loss = loss_rgb + loss_lidar + loss_fusion
 
         if args.model == 'rgb':
             train_loss += loss_rgb.item()
             loss_rgb.backward()
             optimizer.step()
-            progress_bar.set_description(f'train rgb loss:{loss_rgb:.4f}')
+            progress_bar.set_description(f'semi-train rgb loss:{loss_rgb:.4f}')
 
         elif args.model == 'lidar':
             train_loss += loss_lidar.item()
             loss_lidar.backward()
             optimizer.step()
-            progress_bar.set_description(f'train lidar loss:{loss_lidar:.4f}')
+            progress_bar.set_description(
+                f'semi-train lidar loss:{loss_lidar:.4f}')
 
         elif args.model == 'fusion':
             train_loss += loss.item()
             loss.backward()
             optimizer.step()
-            progress_bar.set_description(f'train fusion loss:{loss:.4f}')
+            progress_bar.set_description(f'semi-train fusion loss:{loss:.4f}')
     # The IoU of one epoch
     train_epoch_IoU = overlap_cum / union_cum
-    print(f'Training IoU of vehicles for Epoch: {train_epoch_IoU[0]:.4f}')
-    print(f'Training IoU of human for Epoch: {train_epoch_IoU[1]:.4f}')
+    print(f'Semi-training IoU of vehicles for Epoch: {train_epoch_IoU[0]:.4f}')
+    print(f'Semi-training IoU of human for Epoch: {train_epoch_IoU[1]:.4f}')
     # The loss_rgb of one epoch
     train_epoch_loss = train_loss / count
-    print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
+    print(f'Average Semi-training Loss for Epoch: {train_epoch_loss:.4f}')
 
     return train_epoch_loss, train_epoch_IoU
 

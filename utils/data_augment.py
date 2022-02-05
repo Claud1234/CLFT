@@ -63,10 +63,10 @@ class TopCrop(object):
     def prepare_annotation(self, annotation):
         '''
         Reassign the indices of the objects in annotation(PointCloud);
-        :parameter annotation: 0->ignore 1->vehicle, 2->pedestrian, 3->sign,
+        :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
                                 4->cyclist, 5->background
         :return annotation: 0->background+sign, 1->vehicle
-                                2->pedestrian+cyclist, 3->ignore
+                                2->pedestrian+cyclist, 3->ingore
         '''
         annotation = np.array(annotation)
 

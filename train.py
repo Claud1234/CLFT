@@ -153,13 +153,13 @@ def main():
 
         # Save the checkpoint
         if configs.EARLY_STOPPING is True:
-            early_stopping(valid_epoch_loss, epoch, model, optimizer)
+            early_stopping(args.model, valid_epoch_loss, epoch, model, optimizer)
             if early_stopping.early_stop_trigger is True:
                 break
         else:
             if (epoch+1) % configs.SAVE_EPOCH == 0 and epoch > 0:
                 print('Saving Model...')
-                save_model_dict(epoch, model, optimizer)
+                save_model_dict(args.model, epoch, model, optimizer)
                 print('Saving Model Complete')
     print('Training Complete')
 

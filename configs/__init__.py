@@ -5,7 +5,10 @@ Configurations of model training and validation
 
 Created on May 12nd, 2021
 '''
-LOG_DIR = '/media/storage/data/fusion_logs/asdasd/'  # Path to save checkpoints
+# Path to save checkpoints
+LOG_DIR_RGB = '/media/storage/data/logs/phase_3_rgb_mode/'
+LOG_DIR_LIDAR = '/media/storage/data/logs/phase_3_lidar_mode/'
+LOG_DIR_FUSION = '/media/storage/data/logs/phase_3_fusion_mode/'
 
 # Waymo dataset
 WAY_ROOTPATH = '/home/claude/Data/mauro_waymo'
@@ -53,14 +56,14 @@ LR_LIDAR = 0.00008
 LR_FUSION = 0.00009
 
 
-EPOCHS_SEMI = 1500  # number of total epochs for semi-supervised training
+EPOCHS_SEMI = 300  # number of total epochs for semi-supervised training
 LR_SEMI_RGB = 0.00007
 LR_SEMI_LIDAR = 0.00007
 LR_SEMI_FUSION = 0.00007
 
 # Early stopping
 EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working
-PATIENCE = 200
+PATIENCE = 50
 
 TEST_IMAGE = './test_images/img_human.png'
 TEST_LIDAR = './test_images/lidar_human.pkl'

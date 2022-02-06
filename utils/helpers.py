@@ -8,9 +8,15 @@ import numpy as np
 import configs
 
 
-logdir = configs.LOG_DIR
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
+logdir_rgb = configs.LOG_DIR_RGB
+logdir_lidar = configs.LOG_DIR_LIDAR
+logdir_fusion = configs.LOG_DIR_FUSION
+if not os.path.exists(logdir_rgb):
+    os.makedirs(logdir_rgb)
+if not os.path.exists(logdir_lidar):
+    os.makedirs(logdir_lidar)
+if not os.path.exists(logdir_fusion):
+    os.makedirs(logdir_fusion)
 
 label_colors_list = [
         (255, 0, 0),
@@ -57,11 +63,22 @@ def image_overlay(image, segmented_image):
     return image
 
 
-def save_model_dict(epoch, model, optimizer):
-    torch.save({'epoch': epoch+1,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict()},
-               logdir+f"checkpoint_{epoch}.pth")
+def save_model_dict(train_mode, epoch, model, optimizer):
+    if train_mode == 'rgb':
+        torch.save({'epoch': epoch+1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   logdir_rgb+f"checkpoint_{epoch}.pth")
+    elif train_mode == 'lidar':
+        torch.save({'epoch': epoch+1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   logdir_lidar+f"checkpoint_{epoch}.pth")
+    elif train_mode == 'fusion':
+        torch.save({'epoch': epoch+1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   logdir_fusion+f"checkpoint_{epoch}.pth")
 
 
 def adjust_learning_rate(model, optimizer, epoch, epoch_max):
@@ -109,7 +126,7 @@ class EarlyStopping():
         self.early_stop_trigger = False
         self.count = 0
 
-    def __call__(self, valid_param, epoch, model, optimizer):
+    def __call__(self, train_mode, valid_param, epoch, model, optimizer):
         if self.min_param is None:
             self.min_param = valid_param
         elif valid_param > self.min_param:
@@ -122,6 +139,6 @@ class EarlyStopping():
             print(f'Validation Loss decreased from {self.min_param:.4f} ' +
                   f'to {valid_param:.4f}')
             self.min_param = valid_param
-            save_model_dict(epoch, model, optimizer)
+            save_model_dict(train_mode, epoch, model, optimizer)
             print('Saving Model...')
             self.count = 0

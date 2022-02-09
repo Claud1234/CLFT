@@ -83,7 +83,7 @@ class UnlabeledDataset():
                 'lidar': lid_images}
 
 
-dataset = UnlabeledDataset(configs.ISE_ROOTPATH, configs.ISE_SEMI_TRAIN_SPLITS)
+dataset = UnlabeledDataset(configs.ISE_ROOTPATH, configs.ISE_UNLABELED_SPLITS)
 
 dataloader = DataLoader(dataset,
                         batch_size=configs.BATCH_SIZE,
@@ -118,7 +118,7 @@ with torch.no_grad():
         for j in range(0, len(cam_path_list)):
             segmented_image = draw_test_segmentation_map(outputs[j])
             anno_save_dir = os.path.join(
-                cam_path_list[j].split('/rgb/')[0], ('machine_annotation_rgb_'
+                cam_path_list[j].split('/rgb/')[0], ('machine_annotation_color_'
                                                      + args.model))
 
             if not os.path.exists(anno_save_dir):

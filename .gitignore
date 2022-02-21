@@ -4,7 +4,7 @@
 .settings
 *.pyc
 test1.py
-runs
+runs*
 augment_shuffle_images
 logs
 build

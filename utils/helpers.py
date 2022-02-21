@@ -18,6 +18,13 @@ if not os.path.exists(logdir_lidar):
 if not os.path.exists(logdir_fusion):
     os.makedirs(logdir_fusion)
 
+if not os.path.exists(logdir_rgb + 'progress_save'):
+    os.makedirs(logdir_rgb + 'progress_save')
+if not os.path.exists(logdir_lidar + 'progress_save'):
+    os.makedirs(logdir_lidar + 'progress_save')
+if not os.path.exists(logdir_fusion + 'progress_save'):
+    os.makedirs(logdir_fusion + 'progress_save')
+
 label_colors_list = [
         (255, 0, 0),
         (0, 255, 0),
@@ -63,22 +70,39 @@ def image_overlay(image, segmented_image):
     return image
 
 
-def save_model_dict(train_mode, epoch, model, optimizer):
-    if train_mode == 'rgb':
-        torch.save({'epoch': epoch+1,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   logdir_rgb+f"checkpoint_{epoch}.pth")
-    elif train_mode == 'lidar':
-        torch.save({'epoch': epoch+1,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   logdir_lidar+f"checkpoint_{epoch}.pth")
-    elif train_mode == 'fusion':
-        torch.save({'epoch': epoch+1,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   logdir_fusion+f"checkpoint_{epoch}.pth")
+def save_model_dict(train_mode, epoch, model, optimizer, save_check=False, ):
+    if save_check is False:
+        if train_mode == 'rgb':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_rgb+f"checkpoint_{epoch}.pth")
+        elif train_mode == 'lidar':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_lidar+f"checkpoint_{epoch}.pth")
+        elif train_mode == 'fusion':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_fusion+f"checkpoint_{epoch}.pth")
+    else:
+         if train_mode == 'rgb':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_rgb+'progress_save/'+f"checkpoint_{epoch}.pth")
+         elif train_mode == 'lidar':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_lidar+'progress_save/'+f"checkpoint_{epoch}.pth")
+         elif train_mode == 'fusion':
+            torch.save({'epoch': epoch+1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       logdir_fusion+'progress_save/'+f"checkpoint_{epoch}.pth")
 
 
 def adjust_learning_rate(model, optimizer, epoch, epoch_max):
@@ -134,6 +158,9 @@ class EarlyStopping():
             print(f'Early Stopping Counter: {self.count} of {self.patience}')
             if self.count >= self.patience:
                 self.early_stop_trigger = True
+                print('Saving model for last epoch...')
+                save_model_dict(train_mode, epoch, model, optimizer, True)
+                print('Saving Model Complete')
                 print('Early Stopping Triggered!')
         else:
             print(f'Validation Loss decreased from {self.min_param:.4f} ' +

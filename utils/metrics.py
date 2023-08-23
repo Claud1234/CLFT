@@ -96,6 +96,7 @@ def auc_ap(precision, recall):
 
     # Refer to VOC 2010 devkit_doc 3.4.1 "setting the precision for recall r
     # to the maximum precision obtained for any recall r′ ≥ r.
+    
     for i in range(len(prec_concat)-1, 0, -1):
         prec_concat[i-1] = np.maximum(prec_concat[i-1], prec_concat[i])
 
@@ -103,4 +104,7 @@ def auc_ap(precision, recall):
 
     auc_ap = np.sum((recall_concat[diff_idx + 1] - recall_concat[diff_idx]) *
                     prec_concat[diff_idx + 1])
+    with open('/home/claude/Dev/auc_ap2.npz','wb') as _fd:
+        np.savez_compressed(_fd,
+                            prec_concat=prec_concat)
     return auc_ap

@@ -6,9 +6,9 @@ Configurations of model training and validation
 Created on May 12nd, 2021
 '''
 # Path to save checkpoints
-LOG_DIR_RGB = '/media/storage/data/logs/phase_3_rgb_mode/'
-LOG_DIR_LIDAR = '/media/storage/data/logs/phase_3_lidar_mode/'
-LOG_DIR_FUSION = '/media/storage/data/logs/phase_3_fusion_mode/'
+LOG_DIR_RGB = '/media/storage/data/logs/asdasdasd/'
+LOG_DIR_LIDAR = '/media/storage/data/logs/fsdfsdfsd/'
+LOG_DIR_FUSION = '/media/storage/data/logs/phase_4_fusion_LR_000087/'
 
 # Waymo dataset
 WAY_ROOTPATH = '/home/claude/Data/mauro_waymo'
@@ -18,10 +18,10 @@ WAY_EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 
 # iseAuto dataset
 ISE_ROOTPATH = '/home/claude/Data/claude_iseauto'
-ISE_TRAIN_SPLITS = 'train_all_labeled'
-ISE_SEMI_TRAIN_SPLITS = 'train_all_unlabeled'
+ISE_TRAIN_SPLITS = 'train_all'
+ISE_UNLABELED_SPLITS = 'train_all_unlabeled'
 ISE_VALID_SPLITS = 'early_stop_valid'
-ISE_EVAL_SPLITS = 'night_rain_eval'
+ISE_EVAL_SPLITS = 'day_fair_eval'
 
 # Data augment configurations
 AUGMENT_SHUFFLE = True  # False
@@ -48,22 +48,17 @@ CLASS_TOTAL = 4  # number of classes
 WORKERS = 16  # number of data loading workers (CPU threads)
 BATCH_SIZE = 16  # batch size
 
-EPOCHS = 1000  # number of total epochs for supervised training
 SAVE_EPOCH = 10  # save the checkpoint after these epochs if no early-stopping
 
-LR_RGB = 0.00009  # initial learning rate
-LR_LIDAR = 0.00008
-LR_FUSION = 0.00009
+EPOCHS = 600  # number of total epochs for supervised training
+LR_RGB = 0.00006  # initial learning rate
+LR_LIDAR = 0.00006
+LR_FUSION = 0.000087
 
-
-EPOCHS_SEMI = 300  # number of total epochs for semi-supervised training
-LR_SEMI_RGB = 0.00007
-LR_SEMI_LIDAR = 0.00007
-LR_SEMI_FUSION = 0.00007
 
 # Early stopping
 EARLY_STOPPING = True  # or False. When set True, SAVE_EPOCH no longer working
-PATIENCE = 50
+PATIENCE = 400
 
 TEST_IMAGE = './test_images/img_human.png'
 TEST_LIDAR = './test_images/lidar_human.pkl'

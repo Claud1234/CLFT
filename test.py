@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import os
 import cv2
 import torch
 import argparse
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
@@ -17,7 +16,6 @@ from fcn.fusion_net import FusionNet
 from utils.helpers import draw_test_segmentation_map, image_overlay
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
-import lidar_project_test as lp
 
 
 def prepare_annotation(annotation):
@@ -57,7 +55,9 @@ transform = transforms.Compose([
 # model loading
 model = FusionNet()
 # checkpoint loading
-checkpoint = torch.load('/home/claude/Data/checkpoint_183.pth')
+checkpoint = torch.load(
+    '/media/storage/data/logs/phase_2_fusion_LR_00006/checkpoint_118.pth')
+#    '/media/storage/data/logs/phase_3_SSL_fusion_small_LR/progress_save/checkpoint_319.pth')
 epoch = checkpoint['epoch']
 print('Finished Epochs:', epoch)
 # trained weights loading
@@ -71,10 +71,10 @@ model.eval().to('cuda')
 # Image operations
 image = Image.open(configs.TEST_IMAGE).convert('RGB')
 # image = Image.open(
-#      '/home/claude/Data/claude_iseauto/labeled/day_rain/rgb/sq08_000529.png').\
-#          resize((480, 320)).convert('RGB')
+#       '/home/claude/Data/claude_iseauto/labeled/night_fair/rgb/sq14_000061.png').\
+#         resize((480, 320)).convert('RGB')
 w_orig, h_orig = image.size  # original image's w and h
-# delta = int(h_orig/3)
+# delta = int(h_orig/2)
 delta = 0
 image = TF.crop(image, delta, 0, h_orig-delta, w_orig)
 w_top_crop, h_top_crop = image.size
@@ -89,7 +89,7 @@ image = image.unsqueeze(0)  # add a batch dimension
 annotation = Image.open(configs.TEST_ANNO).convert('F')
 annotation = prepare_annotation(annotation)
 # annotation = Image.open(
-#      '/home/claude/Data/claude_iseauto/labeled/day_rain/annotation_gray/sq08_000529.png').\
+#       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
 #          resize((480, 320), Image.BICUBIC).convert('F')
 annotation = TF.to_pil_image(np.array(annotation))
 annotation = TF.to_tensor(np.array(annotation)).type(torch.LongTensor)  # add a batch dimension
@@ -101,7 +101,7 @@ annotation = annotation.to('cuda')
 # with open('/home/claude/Data/bin/sq20_001876.bin', 'rb') as _fd:
 #     _data = _fd.read()
 #     _lidar = np.frombuffer(_data, np.float32)
-# 
+
 # _xyzi = _lidar.reshape(-1, 4)
 # calib = lp.read_calib_file(
 #     '/home/claude/Dev/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/config/calib.txt')
@@ -114,19 +114,19 @@ annotation = annotation.to('cuda')
 # X = np.zeros((320, 480), np.float32)
 # Y = np.zeros((320, 480), np.float32)
 # Z = np.zeros((320, 480), np.float32)
-# 
-# 
+
+
 # xs, ys = _pts_2d[:, inds].astype(np.int16)
 # # print(xs, ys)
 # xs = (xs/8.84).astype(int)
 # ys = (ys/8.825).astype(int)
-# 
+
 # mean_lidar = configs.ISE_LIDAR_MEAN
 # std_lidar = configs.ISE_LIDAR_STD
 # x_lid = (_xyzi[:, 1] - mean_lidar[0])/std_lidar[0]
 # y_lid = (_xyzi[:, 2] - mean_lidar[1])/std_lidar[1]
 # z_lid = (_xyzi[:, 0] - mean_lidar[2])/std_lidar[2]
-# 
+
 # X[ys, xs] = x_lid[inds]
 # Y[ys, xs] = y_lid[inds]
 # Z[ys, xs] = z_lid[inds]
@@ -138,7 +138,7 @@ points_set, camera_coord = open_lidar(
     4, 4, configs.LIDAR_MEAN, configs.LIDAR_STD)
 
 # points_set, camera_coord = open_lidar(
-#      '/home/claude/Data/claude_iseauto/labeled/day_rain/pkl/sq08_000529.pkl',
+#      '/home/claude/Data/claude_iseauto/labeled/night_fair/pkl/sq14_000061.pkl',
 #      8.84, 8.825, configs.ISE_LIDAR_MEAN, configs.ISE_LIDAR_STD)
 points_set, camera_coord, _ = crop_pointcloud(points_set, camera_coord,
                                               delta, 0, h_orig-delta, w_orig)
@@ -161,6 +161,14 @@ outputs = model(image, lidar_image, 'all')
 # output_array = np.array(list(outputs.items()))
 # np.savez_compressed('rgb_loss_backward', output_array)
 outputs = outputs[args.mode]
+print(outputs.size())
+# annotation_teacher = F.softmax(outputs, 1)
+# print(annotation_teacher.size())
+# _, annotation_teacher = torch.max(annotation_teacher, 1)
+# print(annotation_teacher.detach())
+# print(1 in annotation_teacher)
+# print(2 in annotation_teacher)
+# print(3 in annotation_teacher)
 
 # print(outputs.shape)
 overlap, pred, label, union = find_overlap(outputs, annotation)
@@ -176,17 +184,18 @@ print('recall:', recall)
 
 
 # get the segmentation map
-segmented_image = draw_test_segmentation_map(annotation)
+segmented_image = draw_test_segmentation_map(outputs)
+print(segmented_image.shape)
 # image overlay
 result = image_overlay(orig_image, segmented_image)
 
 # visualize result
 
-    #cv2.imwrite('/home/claude/2.png', np.array(outputs.detach().cpu()))
+# cv2.imwrite('/home/claude/2.png', np.array(outputs.detach().cpu()))
 while True:
     cv2.imshow("result.jpg", result)
     cv2.waitKey(30)
     if cv2.getWindowProperty("result.jpg", cv2.WND_PROP_VISIBLE) <= 0:
         break
-#cv2.imshow("result.jpg", result)
+
 cv2.destroyWindow("result.jpg")

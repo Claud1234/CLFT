@@ -1,0 +1,79 @@
+{
+    "General":{
+        "device":"cuda",
+        "resume_training": true,
+        "resume_training_model_path": "",
+
+
+
+        "type":"segmentation",
+        "model_timm":"vit_base_patch16_384",
+        "emb_dim":768,
+        "hooks":[2, 5, 8, 11],
+        "read":"projection",
+        "resample_dim":256,
+        "optim":"adam",
+        "lr_backbone":1e-5,
+        "lr_scratch":3e-4,
+        "loss_depth":"ssi",
+        "loss_segmentation":"ce",
+        "momentum":0.9,
+        "epochs":20,
+        "batch_size":16,
+        "path_model":"models",
+        "path_predicted_images":"output",
+        "seed":0,
+        "patch_size":16
+    },
+    "Dataset":{
+        "paths":{
+            "path_dataset":"/home/autolab/claude/dataset/claude_iseauto/labeled",
+            "list_datasets":["day_fair"],
+            "path_images":"rgb",
+            "path_segmentations":"annotation_rgb",
+            "path_depths":"annotation_gray"
+        },
+        "extensions":{
+            "ext_images":".png",
+            "ext_segmentations":".png",
+            "ext_depths":".png"
+        },
+        "splits":{
+            "split_train":0.6,
+            "split_val":0.2,
+            "split_test":0.2
+        },
+        "transforms":{
+            "resize":384,
+            "p_flip":0.5,
+            "p_crop":0.3,
+            "p_rot":0.2
+        },
+        "classes":{
+            "0": {
+                "name": "background",
+                "color": [255,0,0]
+            },
+            "1": {
+                "name": "car",
+                "color": [0,255,0]
+            },
+            "2": {
+                "name": "person",
+                "color": [0,0,255]
+            },
+            "3": {
+                "name": "ignore",
+                "color": [100,100,100]
+            }
+        }
+    },
+    "wandb":{
+        "enable":false,
+        "username":"younesbelkada",
+        "images_to_show":3,
+        "im_h":540,
+        "im_w":980
+    }
+
+}

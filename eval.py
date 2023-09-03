@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 
 import configs
 from fcn.fusion_net import FusionNet
-from fcn.dataloader import Dataset
+from iseauto.dataloader import Dataset
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
 

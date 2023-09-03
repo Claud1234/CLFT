@@ -6,9 +6,9 @@ Configurations of model training and validation
 Created on May 12nd, 2021
 '''
 # Path to save checkpoints
-LOG_DIR_RGB = '/media/storage/data/logs/asdasdasd/'
-LOG_DIR_LIDAR = '/media/storage/data/logs/fsdfsdfsd/'
-LOG_DIR_FUSION = '/media/storage/data/logs/phase_4_fusion_LR_000087/'
+LOG_DIR_RGB = '/home/autolab/claude/logs/1/'
+LOG_DIR_LIDAR = '/home/autolab/claude/logs/2/'
+LOG_DIR_FUSION = '/home/autolab/claude/logs/3/'
 
 # Waymo dataset
 WAY_ROOTPATH = '/home/claude/Data/mauro_waymo'
@@ -17,7 +17,7 @@ WAY_VALID_SPLITS = 'early_stop_valid'  # ES valid split file name
 WAY_EVAL_SPLITS = 'eval_night_rain'  # Evaluation split file name (.txt file)
 
 # iseAuto dataset
-ISE_ROOTPATH = '/home/claude/Data/claude_iseauto'
+ISE_ROOTPATH = '/home/autolab/claude/dataset/claude_iseauto'
 ISE_TRAIN_SPLITS = 'train_all'
 ISE_UNLABELED_SPLITS = 'train_all_unlabeled'
 ISE_VALID_SPLITS = 'early_stop_valid'

@@ -3,8 +3,18 @@
         "device":"cuda",
         "resume_training": true,
         "resume_training_model_path": "",
+        "sensor_modality": "rgb",
 
+        "fcn": {
+            "lr_rgb":0.00006,
+            "lr_lidar":0.00006,
+            "lr_fusion":0.000087
+        },
 
+        "dpt": {
+            "lr_backbone":1e-5,
+            "lr_scratch":3e-4
+        },
 
         "type":"segmentation",
         "model_timm":"vit_base_patch16_384",
@@ -12,9 +22,7 @@
         "hooks":[2, 5, 8, 11],
         "read":"projection",
         "resample_dim":256,
-        "optim":"adam",
-        "lr_backbone":1e-5,
-        "lr_scratch":3e-4,
+
         "loss_depth":"ssi",
         "loss_segmentation":"ce",
         "momentum":0.9,
@@ -28,15 +36,10 @@
     "Dataset":{
         "paths":{
             "path_dataset":"/home/autolab/claude/dataset/claude_iseauto/labeled",
-            "list_datasets":["day_fair"],
-            "path_images":"rgb",
-            "path_segmentations":"annotation_rgb",
-            "path_depths":"annotation_gray"
-        },
-        "extensions":{
-            "ext_images":".png",
-            "ext_segmentations":".png",
-            "ext_depths":".png"
+            "list_datasets":["day_fair", "day_rain", "night_fair", "night_rain"],
+            "path_rgb":"rgb",
+            "path_anno":"annotation_rgb",
+            "path_lidar":"pkl"
         },
         "splits":{
             "split_train":0.6,

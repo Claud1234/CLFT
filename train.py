@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import configs
 from iseauto.trainer import Trainer
-from iseauto.dataloader import Dataset
+from iseauto.dataset import Dataset
 from fcn.fusion_net import FusionNet
 from utils.helpers import adjust_learning_rate
 from utils.helpers import save_model_dict

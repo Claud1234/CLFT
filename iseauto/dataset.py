@@ -7,6 +7,7 @@ Created on May 13rd, 2021
 '''
 import os
 import sys
+from glob import glob
 import random
 import numpy as np
 
@@ -22,13 +23,83 @@ from utils.data_augment_unlabeled import TopCropSemi
 from utils.data_augment_unlabeled import AugmentShuffleSemi
 
 
-class Dataset():
-    def __init__(self, dataset, rootpath, split, augment):
+def get_splitted_dataset(config, split, data_category, paths_rgb, path_lidar,
+                         path_anno):
+    list_files = [os.path.basename(im) for im in paths_rgb]
+    np.random.seed(config['General']['seed'])
+    np.random.shuffle(list_files)
+    if split == 'train':
+        selected_files = list_files[:int(len(list_files)*\
+                                config['Dataset']['splits']['split_train'])]
+    elif split == 'val':
+        selected_files = list_files[
+            int(len(list_files)*config['Dataset']['splits']['split_train']):\
+            int(len(list_files)*config['Dataset']['splits']['split_train'])+\
+            int(len(list_files)*config['Dataset']['splits']['split_val'])]
+    else:
+        selected_files = list_files[
+            int(len(list_files)*config['Dataset']['splits']['split_train'])+\
+            int(len(list_files)*config['Dataset']['splits']['split_val']):]
+
+    paths_rgb = [os.path.join(config['Dataset']['paths']['path_dataset'],
+                              data_category,
+                              config['Dataset']['paths']['path_rgb'],
+                              im[:-4]+'png') for im in selected_files]
+    paths_lidar = [os.path.join(config['Dataset']['paths']['path_dataset'],
+                                data_category,
+                                config['Dataset']['paths']['path_lidar'],
+                                im[:-4]+'.pkl') for im in selected_files]
+    paths_anno = [os.path.join(config['Dataset']['paths']['path_dataset'],
+                               data_category,
+                               config['Dataset']['paths']['path_anno'],
+                               im[:-4]+'.png') for im in selected_files]
+    return paths_rgb, paths_lidar, paths_anno
+
+
+class Dataset(object):
+    def __init__(self, config, data_category, split=None,
+                 rootpath, augment):
         np.random.seed(789)
-        self.dataset = dataset
-        self.rootpath = rootpath
-        self.split = split
-        self.augment = augment
+        self.config = config
+
+        path_rgb = os.path.join(config['Dataset']['paths']['path_dataset'],
+                                     data_category,
+                                     config['Dataset']['paths']['path_rgb'],
+                                     '*'+'.png')
+        path_lidar = os.path.join(config['Dataset']['paths']['path_dataset'],
+                                  data_category,
+                                  config['Dataset']['paths']['path_ldiar'],
+                                  '*'+'.pkl')
+        path_anno = os.path.join(config['Dataset']['paths']['path_dataset'],
+                                 data_category,
+                                 config['Dataset']['paths']['path_anno'],
+                                 '*'+'.png')
+
+        self.paths_rgb = glob(path_rgb)
+        self.paths_lidar = glob(path_lidar)
+        self.paths_anno = glob(path_anno)
+
+        assert (split in ['train', 'test', 'val']), "Invalid split!"
+        assert (len(self.paths_rgb) == len(self.paths_lidar)), \
+            "Different amount of rgb and lidar inputs"
+        assert (len(self.paths_rgb) == len(self.paths_anno)), \
+            "Different amount og rgb adn anno inputs"
+        assert (config['Dataset']['splits']['split_train'] +
+                config['Dataset']['splits']['split_test'] +
+                config['Dataset']['splits']['split_val'] == 1), \
+            "Invalid train/test/eval splits (sum must be equal to 1)"
+
+        self.paths_rgb, self.paths_lidar, self.paths_anno = \
+            get_splitted_dataset(config, split, data_category, self.paths_rgb,
+                                 self.paths_lidar, self.paths_anno)
+
+
+        # self.rootpath = rootpath
+        # self.split = split
+        # self.augment = augment
+
+
+
         self.augment_shuffle = configs.AUGMENT_SHUFFLE
 
         self.rgb_normalize = transforms.Normalize(mean=configs.IMAGE_MEAN,

@@ -41,6 +41,29 @@ For example, `vehicle=0`, `human=1`, and so on.
 class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
+def waymo_anno_class_relabel(annotation):
+    """
+    Reassign the indices of the objects in annotation(PointCloud);
+    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
+                            4->cyclist, 5->background
+    :return annotation: 0->background+sign, 1->vehicle
+                            2->pedestrian+cyclist, 3->ingore
+    """
+    annotation = np.array(annotation)
+
+    mask_ignore = annotation == 0
+    mask_sign = annotation == 3
+    mask_cyclist = annotation == 4
+    mask_background = annotation == 5
+
+    annotation[mask_sign] = 0
+    annotation[mask_background] = 0
+    annotation[mask_cyclist] = 2
+    annotation[mask_ignore] = 3
+
+    return torch.from_numpy(annotation).unsqueeze(0).long()
+
+
 def draw_test_segmentation_map(outputs):
     labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
     # labels = outputs.squeeze().detach().cpu().numpy()

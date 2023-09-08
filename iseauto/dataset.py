@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
+"""
 Dataloader python script
 
 Created on May 13rd, 2021
-'''
+"""
 import os
 import sys
-from glob import glob
 import random
 import numpy as np
+from glob import glob
+from PIL import Image
 
 import torch
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
 import configs
-from utils.lidar_process import get_unresized_lid_img_val
-from utils.data_augment import TopCrop
+from utils.helpers import waymo_anno_class_relabel
+from utils.lidar_process import open_lidar
+from utils.lidar_process import crop_pointcloud
 from utils.data_augment import AugmentShuffle
-from utils.data_augment_unlabeled import TopCropSemi
-from utils.data_augment_unlabeled import AugmentShuffleSemi
 
 
-def get_splitted_dataset(config, split, data_category, paths_rgb, path_lidar,
-                         path_anno):
+def get_splitted_dataset(config, split, data_category, paths_rgb):
     list_files = [os.path.basename(im) for im in paths_rgb]
     np.random.seed(config['General']['seed'])
     np.random.shuffle(list_files)
@@ -57,8 +56,7 @@ def get_splitted_dataset(config, split, data_category, paths_rgb, path_lidar,
 
 
 class Dataset(object):
-    def __init__(self, config, data_category, split=None,
-                 rootpath, augment):
+    def __init__(self, config, data_category, split=None,):
         np.random.seed(789)
         self.config = config
 
@@ -90,98 +88,99 @@ class Dataset(object):
             "Invalid train/test/eval splits (sum must be equal to 1)"
 
         self.paths_rgb, self.paths_lidar, self.paths_anno = \
-            get_splitted_dataset(config, split, data_category, self.paths_rgb,
-                                 self.paths_lidar, self.paths_anno)
+            get_splitted_dataset(config, split, data_category, self.paths_rgb)
 
 
         # self.rootpath = rootpath
         # self.split = split
         # self.augment = augment
 
+        # self.augment_shuffle = configs.AUGMENT_SHUFFLE
+        self.img_size = config['Dataset']['transforms']['resize']
+        self.rgb_normalize = transforms.Compose([
+                        transforms.Resize((self.img_size,self.img_size)),
+                        transforms.ToTensor(),
+                        transforms.Normalize(
+                            mean=config['Dataset']['transforms']['image_mean'],
+                            std=config['Dataset']['transforms']['image_mean'])
+        ])
 
-
-        self.augment_shuffle = configs.AUGMENT_SHUFFLE
-
-        self.rgb_normalize = transforms.Normalize(mean=configs.IMAGE_MEAN,
-                                                  std=configs.IMAGE_STD)
-
-        list_examples_file = open(os.path.join(
-                                rootpath, 'splits', split + '.txt'), 'r')
-        self.list_examples_cam = np.array(
-                                        list_examples_file.read().splitlines())
-        list_examples_file.close()
+        self.anno_resize = transforms.Resize((self.img_size,self.img_size),
+                        interpolation=transforms.InterpolationMode.NEAREST)
 
     def __len__(self):
-        return len(self.list_examples_cam)
+        return len(self.paths_rgb)
 
     def __getitem__(self, idx):
-        if self.dataset == 'waymo':
-            cam_path = os.path.join(self.rootpath, self.list_examples_cam[idx])
-            annotation_path = cam_path.replace('/camera', '/annotation')
-            lidar_path = cam_path.replace('/camera', '/lidar').\
-                replace('.png', '.pkl')
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
 
-        elif self.dataset == 'iseauto':
-            cam_path = os.path.join(self.rootpath, self.list_examples_cam[idx])
-            annotation_path = cam_path.replace('/rgb', '/annotation_gray')
-            lidar_path = cam_path.replace('/rgb', '/pkl').\
-                replace('.png', '.pkl')
+        rgb_name = self.paths_rgb[idx].split('/')[-1].split('.')[0]
+        anno_name = self.paths_anno[idx].split('/')[-1].split('.')[0]
+        lidar_name = self.paths_lidar[idx].split('/')[-1].split('.')[0]
+        assert (rgb_name == anno_name), "rgb and anno input not matching"
+        assert (rgb_name == lidar_name), "rgb and lidar input not matching"
+
+
+        if self.config['Dataset']['name'] == 'waymo':
+            rgb = self.rgb_normalize(Image.open(self.paths_rgb[idx]))
+            anno = waymo_anno_class_relabel(Image.open(self.paths_anno[idx]))
+            anno = self.anno_resize(anno)
+
+            points_set, camera_coord = open_lidar(self.paths_lidar[idx],
+                                                w_ratio=4,
+                                                h_ratio=4,
+                                                lidar_mean=configs.LIDAR_MEAN,
+                                                lidar_std=configs.LIDAR_STD)
+
+        elif self.config['Dataset']['name'] == 'iseauto':
+            rgb = self.rgb_normalize(Image.open(self.paths_rgb[idx]))
+            anno = torch.from_numpy(
+                Image.open(self.paths_anno[idx])).unsqueeze(0).long()
+            anno = self.anno_resize(anno)
+            points_set, camera_coord = open_lidar(self.paths_lidar[idx],
+                                                w_ratio=8.84,
+                                                h_ratio=8.825,
+                                                lidar_mean=configs.ISE_LIDAR_MEAN,
+                                                lidar_std=configs.ISE_LIDAR_STD)
 
         else:
-            print("Error! Check the dataset arg, either 'waymo' or 'iseauto")
-            sys.exit()
+            sys.exit("[Dataset][name] must be specified waymo or iseauto")
 
-        rgb_name = cam_path.split('/')[-1].split('.')[0]
-        ann_name = annotation_path.split('/')[-1].split('.')[0]
-        lidar_name = lidar_path.split('/')[-1].split('.')[0]
-        assert (rgb_name == lidar_name)
-        assert (ann_name == lidar_name)
+        # Crop the top part 1/2 of the input data
+        rgb_orig = rgb.clone()
+        delta = int(self.img_size/2)
+        rgb = TF.crop(rgb, delta, 0, self.img_size-delta, self.img_size)
+        anno = TF.crop(anno, delta, 0, self.img_size - delta, self.img_size)
+        points_set, camera_coord, _ = crop_pointcloud(points_set,
+                                                      camera_coord,
+                                                      delta, 0,
+                                                      self.img_size-delta,
+                                                      self.img_size)
 
-        top_crop_class = TopCrop(self.dataset, cam_path,
-                                 annotation_path, lidar_path)
-        # Apply top crop for raw data to crop the 1/2 top of the images
-        top_crop_rgb, top_crop_anno,\
-            top_crop_points_set,\
-            top_crop_camera_coord = top_crop_class.top_crop()
+        data_augment = AugmentShuffle(self.config, rgb, anno, points_set,
+                                      camera_coord)
 
-        augment_class = AugmentShuffle(top_crop_rgb, top_crop_anno,
-                                       top_crop_points_set,
-                                       top_crop_camera_coord)
-        if self.augment is not None:
-            if self.augment_shuffle is True:
-                aug_list = ['random_crop', 'random_rotate', 'colour_jitter',
-                            'random_horizontal_flip', 'random_vertical_flip']
-                random.shuffle(aug_list)
+        if self.config['Dataset']['transforms']['augment_sequence_shuffle']:
+            aug_list = ['random_crop', 'random_rotate', 'colour_jitter',
+                        'random_horizontal_flip', 'random_vertical_flip']
+            random.shuffle(aug_list)
 
-                for i in range(len(aug_list)):
-                    augment_proc = getattr(augment_class, aug_list[i])
-                    rgb, anno, X, Y, Z = augment_proc()
+            for i in range(len(aug_list)):
+                augment_proc = getattr(data_augment, aug_list[i])
+                rgb, anno, X, Y, Z = augment_proc()
 
-            else:  # self.augment_shuffle is False
-                rgb, anno, X, Y, Z = augment_class.random_crop()
-                rgb, anno, X, Y, Z = augment_class.random_rotate()
-                rgb, anno, X, Y, Z = augment_class.colour_jitter()
-                rgb, anno, X, Y, Z = augment_class.random_horizontal_flip()
-                rgb, anno, X, Y, Z = augment_class.random_vertical_flip()
-
-        else:  # slef.augment is None, all input data are only top cropped
-            rgb = top_crop_rgb
-            anno = top_crop_anno
-            points_set = top_crop_points_set
-            camera_coord = top_crop_camera_coord
-
-            w, h = rgb.size
-            X, Y, Z = get_unresized_lid_img_val(h, w, points_set, camera_coord)
+        else:
+            rgb, anno, X, Y, Z = data_augment.random_crop()
+            rgb, anno, X, Y, Z = data_augment.random_rotate()
+            rgb, anno, X, Y, Z = data_augment.colour_jitter()
+            rgb, anno, X, Y, Z = data_augment.random_horizontal_flip()
+            rgb, anno, X, Y, Z = data_augment.random_vertical_flip()
 
         X = TF.to_tensor(np.array(X))
         Y = TF.to_tensor(np.array(Y))
         Z = TF.to_tensor(np.array(Z))
         lid_images = torch.cat((X, Y, Z), 0)
-        rgb_copy = TF.to_tensor(np.array(rgb.copy()))[0:3]
-        rgb = self.rgb_normalize(TF.to_tensor(np.array(rgb))[0:3])
-        annotation = \
-            TF.to_tensor(np.array(anno)).type(torch.LongTensor).squeeze(0)
 
-        return {'rgb': rgb, 'rgb_orig': rgb_copy,
-                'lidar': lid_images, 'annotation': annotation}
+        return rgb, rgb_orig, lid_images, anno
 

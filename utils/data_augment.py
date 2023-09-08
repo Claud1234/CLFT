@@ -7,8 +7,6 @@ Created on May 13rd, 2021
 '''
 import torch
 import random
-import numpy as np
-from PIL import Image
 
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
@@ -18,73 +16,11 @@ import configs
 from utils.lidar_process import get_resized_lid_img_val
 from utils.lidar_process import get_unresized_lid_img_val
 from utils.lidar_process import crop_pointcloud
-from utils.lidar_process import open_lidar
-
-
-class TopCrop(object):
-    def __init__(self, dataset, image_path, annotation_path, lidar_path):
-        if dataset == 'waymo':
-            self.rgb = Image.open(image_path)
-            self.annotation = Image.open(annotation_path).convert('F')
-            self.annotation = self.prepare_annotation(self.annotation)
-            self.points_set, self.camera_coord = open_lidar(
-                                                lidar_path,
-                                                w_ratio=4,
-                                                h_ratio=4,
-                                                lidar_mean=configs.LIDAR_MEAN,
-                                                lidar_std=configs.LIDAR_STD)
-
-        elif dataset == 'iseauto':
-            self.rgb = Image.open(image_path).resize((480, 320), Image.BICUBIC)
-            self.annotation = Image.open(annotation_path).\
-                resize((480, 320), Image.BICUBIC).convert('F')
-            self.annotation = TF.to_pil_image(np.array(self.annotation))
-            self.points_set, self.camera_coord = open_lidar(
-                                            lidar_path,
-                                            w_ratio=8.84,
-                                            h_ratio=8.825,
-                                            lidar_mean=configs.ISE_LIDAR_MEAN,
-                                            lidar_std=configs.ISE_LIDAR_STD)
-    '''
-    Cut the 1/2 top part of the image and lidar, applied before to all of
-    augmentation operations
-    '''
-    def top_crop(self):
-        w_orig, h_orig = self.rgb.size
-        delta = int(h_orig / 2)
-        rgb = TF.crop(self.rgb, delta, 0, h_orig-delta, w_orig)
-        annotation = TF.crop(self.annotation, delta, 0, h_orig-delta, w_orig)
-        points_set, camera_coord, _ = crop_pointcloud(self.points_set,
-                                                      self.camera_coord,
-                                                      delta, 0,
-                                                      h_orig-delta, w_orig)
-        return rgb, annotation, points_set, camera_coord
-
-    def prepare_annotation(self, annotation):
-        '''
-        Reassign the indices of the objects in annotation(PointCloud);
-        :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
-                                4->cyclist, 5->background
-        :return annotation: 0->background+sign, 1->vehicle
-                                2->pedestrian+cyclist, 3->ingore
-        '''
-        annotation = np.array(annotation)
-
-        mask_ignore = annotation == 0
-        mask_sign = annotation == 3
-        mask_cyclist = annotation == 4
-        mask_background = annotation == 5
-
-        annotation[mask_sign] = 0
-        annotation[mask_background] = 0
-        annotation[mask_cyclist] = 2
-        annotation[mask_ignore] = 3
-
-        return TF.to_pil_image(annotation)
 
 
 class AugmentShuffle(object):
-    def __init__(self, rgb, anno, points_set, camera_coord):
+    def __init__(self, config, rgb, anno, points_set, camera_coord):
+        self.config = config
         self.rgb = rgb
         self.anno = anno
         self.points_set = points_set
@@ -93,10 +29,10 @@ class AugmentShuffle(object):
         self.X, self.Y, self.Z = None, None, None
 
     def random_crop(self):
-        crop_size = configs.RANDOM_CROP_SIZE
+        crop_size = self.config['Dataset']['transforms']['randon_crop_size']
         i, j, self.h_resize, self.w_resize = \
             transforms.RandomResizedCrop.get_params(self.rgb, scale=(0.2, 1.),
-                                                    ratio=(3./4., 4./3.))
+                                                    ratio=(3. / 4., 4. / 3.))
         self.rgb = TF.resized_crop(self.rgb, i, j,
                                    self.h_resize, self.w_resize,
                                    (crop_size, crop_size),

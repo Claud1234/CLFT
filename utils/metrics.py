@@ -33,7 +33,8 @@ def find_overlap(output, anno):
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
     '''
-    # 0 -> background, 1-> vehicle,  2-> human (ped+cyclist), 3 -> ignore
+    # 0 -> background, 1-> vehicle,  2-> human (ped+cyclist), 3 -> ignore,
+    # 4 -> cyclist.
     n_classes = configs.CLASS_TOTAL - 1
     # Return each pixel value as either 0 or 1 or 2 or 3, which
     # represent different classes.

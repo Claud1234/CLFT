@@ -1,21 +1,16 @@
 {
     "General":{
         "device":"cuda",
-        "resume_training": true,
-        "resume_training_model_path": "",
         "sensor_modality": "rgb",
-
         "fcn": {
             "lr_rgb":0.00006,
             "lr_lidar":0.00006,
             "lr_fusion":0.000087
         },
-
         "dpt": {
             "lr_backbone":1e-5,
             "lr_scratch":3e-4
         },
-
         "type":"segmentation",
         "model_timm":"vit_base_patch16_384",
         "emb_dim":768,
@@ -26,20 +21,29 @@
         "loss_depth":"ssi",
         "loss_segmentation":"ce",
         "momentum":0.9,
-        "epochs":20,
+        "epochs":50,
         "batch_size":16,
         "path_model":"models",
         "path_predicted_images":"output",
         "seed":0,
-        "patch_size":16
+        "patch_size":16,
+        "resume_training": true,
+        "resume_training_model_path": "",
+        "early_stop_patience": 20,
+        "save_epoch": 10
+    },
+    "Log": {
+        "logdir_rgb": "/home/autolab/claude/logs/rgb/",
+        "logdir_lidar": "/home/autolab/claude/logs/lidar",
+        "logdir_fusion": "/home/autolab/claude/logs/fusion"
     },
     "Dataset":{
         "name": "waymo",
         "paths":{
-            "path_dataset":"/home/autolab/claude/dataset/claude_iseauto/labeled",
+            "path_dataset":"/home/autolab/claude/dataset/mauro_waymo/labeled",
             "list_datasets":["day_fair", "day_rain", "night_fair", "night_rain"],
             "path_rgb":"rgb",
-            "path_anno":"annotation_gray",
+            "path_anno":"annotation_rgb",
             "path_lidar":"pkl"
         },
         "splits":{
@@ -49,42 +53,37 @@
         },
         "transforms":{
             "resize":384,
-            "augment_sequence_shuffle": true,
+            "augment_sequence_shuffle": false,
             "image_mean":[0.485, 0.456, 0.406],
             "image_std":[0.229, 0.224, 0.225],
             "lidar_mean_waymo":[-0.17263354, 0.85321806, 24.5527253],
             "lidar_std_waymo":[7.34546552, 1.17227659, 15.83745082],
             "lidar_mean_iseatuo":[-0.079, 0.033, 15.90],
             "lidar_std_iseauto":[7.79,  2.156, 7.60],
-            "randon_crop_size":128,
+            "random_crop_size":128,
             "random_rotate_range":20,
-            "color_jitter":[0.4, 0.4, 0.4, 0.1]
+            "color_jitter":[0.4, 0.4, 0.4, 0.1],
+            "p_flip":0.5,
+            "p_crop":0.3,
+            "p_rot":0.2
         },
         "classes":{
             "0": {
                 "name": "background",
-                "color": [255,0,0]
+                "color": 0
             },
             "1": {
                 "name": "car",
-                "color": [0,255,0]
+                "color": 1
             },
             "2": {
                 "name": "person",
-                "color": [0,0,255]
+                "color": 2
             },
             "3": {
                 "name": "ignore",
-                "color": [100,100,100]
+                "color": 3
             }
         }
-    },
-    "wandb":{
-        "enable":false,
-        "username":"younesbelkada",
-        "images_to_show":3,
-        "im_h":540,
-        "im_w":980
     }
-
 }

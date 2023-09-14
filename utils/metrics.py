@@ -39,6 +39,7 @@ def find_overlap(output, anno):
     # Return each pixel value as either 0 or 1 or 2 or 3, which
     # represent different classes.
     _, pred_indices = torch.max(output, 1)  # (8, 160, 480)
+#    print(pred_indices.size())
 
     pred_indices[anno == 3] = 0
 

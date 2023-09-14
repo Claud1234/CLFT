@@ -5,27 +5,27 @@ import timm
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
-from FOD.Reassemble import Reassemble
-from FOD.Fusion import Fusion
-from FOD.Head import HeadDepth, HeadSeg
+from dpt.reassemble import Reassemble
+from dpt.fusion import Fusion
+from dpt.head import HeadDepth, HeadSeg
 
 torch.manual_seed(0)
 
 
 class DPT(nn.Module):
     def __init__(self,
-                 image_size         = (3, 384, 384),
-                 patch_size         = 16,
-                 emb_dim            = 1024,
-                 resample_dim       = 256,
-                 read               = 'projection',
+                 image_size=(3, 384, 384),
+                 patch_size=16,
+                 emb_dim=1024,
+                 resample_dim=256,
+                 read='projection',
                  num_layers_encoder = 24,
-                 hooks              = [5, 11, 17, 23],
-                 reassemble_s       = [4, 8, 16, 32],
-                 transformer_dropout= 0,
-                 nclasses           = 2,
-                 type               = "full",
-                 model_timm         = "vit_large_patch16_384"):
+                 hooks=[5, 11, 17, 23],
+                 reassemble_s=[4, 8, 16, 32],
+                 transformer_dropout=0,
+                 nclasses=2,
+                 type="full",
+                 model_timm="vit_large_patch16_384"):
         """
         Focus on Depth
         type : {"full", "depth", "segmentation"}

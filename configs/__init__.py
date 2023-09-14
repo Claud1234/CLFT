@@ -25,7 +25,7 @@ ISE_EVAL_SPLITS = 'day_fair_eval'
 
 # Data augment configurations
 AUGMENT_SHUFFLE = True  # False
-RANDOM_CROP_SIZE = 128
+RANDOM_CROP_SIZE = 384
 ROTATE_RANGE = 20  # rotate range (-20, 20)
 JITTER_PARAM = [0.4, 0.4, 0.4, 0.1]  # [brightness, contrast, saturation, hue]
 

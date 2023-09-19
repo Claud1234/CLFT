@@ -16,7 +16,6 @@ import torch
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
-import configs
 from utils.helpers import waymo_anno_class_relabel
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
@@ -33,13 +32,15 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
                                 config['Dataset']['splits']['split_train'])]
     elif split == 'val':
         selected_files = list_files[
-            int(len(list_files)*config['Dataset']['splits']['split_train']):\
-            int(len(list_files)*config['Dataset']['splits']['split_train'])+\
+            int(len(list_files)*config['Dataset']['splits']['split_train']):
+            int(len(list_files)*config['Dataset']['splits']['split_train']) +
             int(len(list_files)*config['Dataset']['splits']['split_val'])]
     else:
         selected_files = list_files[
-            int(len(list_files)*config['Dataset']['splits']['split_train'])+\
+            int(len(list_files)*config['Dataset']['splits']['split_train']) +
             int(len(list_files)*config['Dataset']['splits']['split_val']):]
+
+    #print(selected_files)
 
     paths_rgb = [os.path.join(config['Dataset']['paths']['path_dataset'],
                               data_category,
@@ -62,9 +63,9 @@ class Dataset(object):
         self.config = config
 
         path_rgb = os.path.join(config['Dataset']['paths']['path_dataset'],
-                                     data_category,
-                                     config['Dataset']['paths']['path_rgb'],
-                                     '*'+'.png')
+                                data_category,
+                                config['Dataset']['paths']['path_rgb'],
+                                '*'+'.png')
         path_lidar = os.path.join(config['Dataset']['paths']['path_dataset'],
                                   data_category,
                                   config['Dataset']['paths']['path_lidar'],
@@ -137,22 +138,28 @@ class Dataset(object):
             anno = waymo_anno_class_relabel(
                 Image.open(self.paths_anno[idx]))  # Tensor [1, H, W]
 
-            points_set, camera_coord = open_lidar(self.paths_lidar[idx],
-                                                w_ratio=4,
-                                                h_ratio=4,
-                                                lidar_mean=configs.LIDAR_MEAN,
-                                                lidar_std=configs.LIDAR_STD)
+            points_set, camera_coord = open_lidar(
+                self.paths_lidar[idx],
+                w_ratio=4,
+                h_ratio=4,
+                lidar_mean=self.config['Dataset']['transforms'][
+                    'lidar_mean_waymo'],
+                lidar_std=self.config['Dataset']['transforms'][
+                    'lidar_mean_waymo'])
 
         elif self.config['Dataset']['name'] == 'iseauto':
             rgb = self.rgb_normalize(Image.open(self.paths_rgb[idx]))
             anno = torch.from_numpy(
                 Image.open(self.paths_anno[idx])).unsqueeze(0).long()
             anno = self.anno_resize(anno)
-            points_set, camera_coord = open_lidar(self.paths_lidar[idx],
-                                                w_ratio=8.84,
-                                                h_ratio=8.825,
-                                                lidar_mean=configs.ISE_LIDAR_MEAN,
-                                                lidar_std=configs.ISE_LIDAR_STD)
+            points_set, camera_coord = open_lidar(
+                self.paths_lidar[idx],
+                w_ratio=8.84,
+                h_ratio=8.825,
+                lidar_mean=self.config['Dataset']['transforms'][
+                    'lidar_mean_iseauto'],
+                lidar_std=self.config['Dataset']['transforms'][
+                    'lidar_mean_iseauto'])
 
         else:
             sys.exit("[Dataset][name] must be specified waymo or iseauto")

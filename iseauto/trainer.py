@@ -4,9 +4,6 @@
 import os
 import sys
 import torch
-import matplotlib.pyplot as plt
-import numpy as np
-import wandb
 import cv2
 import torch.nn as nn
 from tqdm import tqdm
@@ -15,7 +12,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from fcn.fusion_net import FusionNet
 from utils.metrics import find_overlap
-#from FOD.utils import get_losses, get_optimizer, get_schedulers, create_dir
 from dpt.dpt import DPT
 from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
@@ -81,9 +77,8 @@ class Trainer(object):
 
 		self.model.to(self.device)
 
-		nclasses = len(config['Dataset']['classes'])
-		print(nclasses)
-		weight_loss = torch.Tensor(nclasses).fill_(0)
+		self.nclasses = len(config['Dataset']['classes'])
+		weight_loss = torch.Tensor(self.nclasses).fill_(0)
 		# define weight of different classes, 0-background, 1-car, 2-people.
 		weight_loss[3] = 1
 		weight_loss[0] = 1
@@ -96,7 +91,6 @@ class Trainer(object):
 		The training of one epoch
 		"""
 		epochs = self.config['General']['epochs']
-		batch_size = self.config['General']['batch_size']
 		early_stopping = EarlyStopping(self.config)
 		self.model.train()
 
@@ -121,7 +115,7 @@ class Trainer(object):
 				#print(output_seg.size())
 				anno = batch['anno']
 				batch_overlap, batch_pred, batch_label, batch_union = \
-					find_overlap(output_seg, anno)
+					find_overlap(self.nclasses, output_seg, anno)
 
 				overlap_cum += batch_overlap
 				pred_cum += batch_pred
@@ -151,16 +145,16 @@ class Trainer(object):
 														valid_dataloader)
 
 			# Plot the train and validation loss in Tensorboard
-			writer.add_scalars('Loss', {'train': train_epoch_loss,
-										'valid': valid_epoch_loss}, epoch)
-			# Plot the train and validation IoU in Tensorboard
-			writer.add_scalars('Vehicle_IoU',
-							   {'train': train_epoch_IoU[0],
-								'valid': valid_epoch_IoU[0]}, epoch)
-			writer.add_scalars('Human_IoU',
-							   {'train': train_epoch_IoU[1],
-								'valid': valid_epoch_IoU[1]}, epoch)
-			writer.close()
+			# writer.add_scalars('Loss', {'train': train_epoch_loss,
+			# 							'valid': valid_epoch_loss}, epoch)
+			# # Plot the train and validation IoU in Tensorboard
+			# writer.add_scalars('Vehicle_IoU',
+			# 				   {'train': train_epoch_IoU[0],
+			# 					'valid': valid_epoch_IoU[0]}, epoch)
+			# writer.add_scalars('Human_IoU',
+			# 				   {'train': train_epoch_IoU[1],
+			# 					'valid': valid_epoch_IoU[1]}, epoch)
+			# writer.close()
 
 			early_stopping(valid_epoch_loss, epoch, self.model,
 						   self.optimizer_dpt_backbone,
@@ -174,7 +168,7 @@ class Trainer(object):
 				print('Saving Model Complete')
 			if early_stopping.early_stop_trigger is True:
 				break
-			print('Training Complete')
+		print('Training Complete')
 
 	def validate_dpt(self, valid_dataloader):
 		"""
@@ -198,7 +192,7 @@ class Trainer(object):
 				anno = batch['anno']
 
 				batch_overlap, batch_pred, batch_label, batch_union = \
-					find_overlap(output_seg, anno)
+					find_overlap(self.nclasses, output_seg, anno)
 
 				overlap_cum += batch_overlap
 				pred_cum += batch_pred

@@ -6,7 +6,6 @@ Model evaluation metrics Python scripts
 Created on June 18th, 2021
 '''
 import torch
-import configs
 import numpy as np
 
 '''
@@ -27,7 +26,7 @@ recall(2) = d / (b + d)
 '''
 
 
-def find_overlap(output, anno):
+def find_overlap(n_classes, output, anno):
     '''
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
@@ -35,7 +34,7 @@ def find_overlap(output, anno):
     '''
     # 0 -> background, 1-> vehicle,  2-> human (ped+cyclist), 3 -> ignore,
     # 4 -> cyclist.
-    n_classes = configs.CLASS_TOTAL - 1
+    n_classes = n_classes - 1
     # Return each pixel value as either 0 or 1 or 2 or 3, which
     # represent different classes.
     _, pred_indices = torch.max(output, 1)  # (8, 160, 480)
@@ -106,7 +105,5 @@ def auc_ap(precision, recall):
 
     auc_ap = np.sum((recall_concat[diff_idx + 1] - recall_concat[diff_idx]) *
                     prec_concat[diff_idx + 1])
-    with open('/home/claude/Dev/auc_ap2.npz','wb') as _fd:
-        np.savez_compressed(_fd,
-                            prec_concat=prec_concat)
+
     return auc_ap

@@ -5,7 +5,10 @@
         "fcn": {
             "lr_rgb":0.00006,
             "lr_lidar":0.00006,
-            "lr_fusion":0.000087
+            "lr_fusion":0.000087,
+            "lr_rgb_semi":0.000003,
+            "lr_lidar_semi":0.000003,
+            "lr_fusion_semi":0.00003
         },
         "dpt": {
             "lr_backbone":1e-5,
@@ -21,21 +24,21 @@
         "loss_depth":"ssi",
         "loss_segmentation":"ce",
         "momentum":0.9,
-        "epochs":50,
-        "batch_size":16,
-        "path_model":"models",
+        "epochs":200,
+        "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
         "patch_size":16,
         "resume_training": true,
         "resume_training_model_path": "",
-        "early_stop_patience": 20,
-        "save_epoch": 10
+        "early_stop_patience": 50,
+        "save_epoch": 10,
+        "model_path":"/media/nfs_client/training_logs/rgb/checkpoint_39.pth"
     },
     "Log": {
-        "logdir_rgb": "/home/autolab/claude/logs/rgb/",
-        "logdir_lidar": "/home/autolab/claude/logs/lidar",
-        "logdir_fusion": "/home/autolab/claude/logs/fusion"
+        "logdir_rgb": "/media/nfs_client/training_logs/rgb/",
+        "logdir_lidar": "/media/nfs_client/training_logs/lidar/",
+        "logdir_fusion": "/media/nfs_client/training_logs/fusion/"
     },
     "Dataset":{
         "name": "waymo",

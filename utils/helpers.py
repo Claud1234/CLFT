@@ -5,8 +5,6 @@ import cv2
 import torch
 import numpy as np
 
-import configs
-
 
 def creat_dir(config):
     logdir_rgb = config['Log']['logdir_rgb']
@@ -14,10 +12,13 @@ def creat_dir(config):
     logdir_fusion = config['Log']['logdir_rgb']
     if not os.path.exists(logdir_rgb):
         os.makedirs(logdir_rgb)
+        print(f'Making log directory {logdir_rgb}...')
     if not os.path.exists(logdir_lidar):
         os.makedirs(logdir_lidar)
+        print(f'Making log directory {logdir_lidar}...')
     if not os.path.exists(logdir_fusion):
         os.makedirs(logdir_fusion)
+        print(f'Making log directory {logdir_fusion}...')
 
     if not os.path.exists(logdir_rgb + 'progress_save'):
         os.makedirs(logdir_rgb + 'progress_save')
@@ -155,14 +156,14 @@ def save_model_dict(config, epoch, model,
                 'logdir_fusion'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
 
 
-def adjust_learning_rate(model, optimizer, epoch, epoch_max):
+def adjust_learning_rate(config, model, optimizer, epoch, epoch_max):
     """Decay the learning rate based on schedule"""
     if model == 'rgb':
-        lr = configs.LR_RGB * (1 - epoch/epoch_max)**0.9
+        lr = config['General']['fcn']['lr_rgb'] * (1 - epoch/epoch_max)**0.9
     elif model == 'lidar':
-        lr = configs.LR_LIDAR * (1 - epoch/epoch_max)**0.9
+        lr = config['General']['fcn']['lr_lidar'] * (1 - epoch/epoch_max)**0.9
     elif model == 'fusion':
-        lr = configs.LR_FUSION * (1 - epoch/epoch_max)**0.9
+        lr = config['General']['fcn']['lr_fusion'] * (1 - epoch/epoch_max)**0.9
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -170,22 +171,28 @@ def adjust_learning_rate(model, optimizer, epoch, epoch_max):
     return lr
 
 
-def adjust_learning_rate_semi(model, optimizer, epoch, epoch_max):
+def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
     mid_epoch = epoch_max/2
     if epoch <= mid_epoch:
         if model == 'rgb':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_RGB
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+                'lr_rgb_semi']
         elif model == 'lidar':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_LIDAR
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+                'lr_lidar_semi']
         elif model == 'fusion':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*configs.LR_SEMI_FUSION
+            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+                'lr_fusion_semi']
     else:
         if model == 'rgb':
-            lr = configs.LR_SEMI_RGB * (1 - epoch/epoch_max)**0.9
+            lr = config['General']['fcn'][
+                'lr_rgb_semi'] * (1 - epoch/epoch_max)**0.9
         elif model == 'lidar':
-            lr = configs.LR_SEMI_LIDAR * (1 - epoch/epoch_max)**0.9
+            lr = config['General']['fcn'][
+                'lr_lidar_semi'] * (1 - epoch/epoch_max)**0.9
         elif model == 'fusion':
-            lr = configs.LR_SEMI_FUSION * (1 - epoch/epoch_max)**0.9
+            lr = config['General']['fcn'][
+                'lr_fusion_semi'] * (1 - epoch/epoch_max)**0.9
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr

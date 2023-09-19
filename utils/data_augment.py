@@ -12,8 +12,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 from torchvision.transforms.functional import InterpolationMode
 
-import configs
-from utils.lidar_process import get_resized_lid_img_val
+#from utils.lidar_process import get_resized_lid_img_val
 from utils.lidar_process import get_unresized_lid_img_val
 from utils.lidar_process import crop_pointcloud
 
@@ -31,46 +30,46 @@ class AugmentShuffle(object):
         self.h_resize, self.w_resize = None, None
         self.X, self.Y, self.Z = None, None, None
 
-    def random_crop(self):
-        crop_size = self.config['Dataset']['transforms']['random_crop_size']
-        i, j, self.h_resize, self.w_resize = \
-            transforms.RandomResizedCrop.get_params(self.rgb, scale=(0.2, 1.),
-                                                    ratio=(3. / 4., 4. / 3.))
-        self.rgb = TF.resized_crop(self.rgb, i, j,
-                                   self.h_resize, self.w_resize,
-                                   (crop_size, crop_size),
-                                   InterpolationMode.BILINEAR)
-        self.anno = TF.resized_crop(self.anno, i, j,
-                                    self.h_resize, self.w_resize,
-                                    (crop_size, crop_size),
-                                    InterpolationMode.NEAREST)
-
-        if self.X is None and self.Y is None and self.Z is None:
-            self.points_set, self.camera_coord, _ = crop_pointcloud(
-                                                            self.points_set,
-                                                            self.camera_coord,
-                                                            i, j,
-                                                            self.h_resize,
-                                                            self.w_resize)
-            self.X, self.Y, self.Z = get_resized_lid_img_val(self.h_resize,
-                                                             self.w_resize,
-                                                             self.points_set,
-                                                             self.camera_coord)
-        else:
-            self.X = TF.resized_crop(self.X, i, j,
-                                     self.h_resize, self.w_resize,
-                                     (crop_size, crop_size),
-                                     InterpolationMode.BILINEAR)
-            self.Y = TF.resized_crop(self.Y, i, j,
-                                     self.h_resize, self.w_resize,
-                                     (crop_size, crop_size),
-                                     InterpolationMode.BILINEAR)
-            self.Z = TF.resized_crop(self.Z, i, j,
-                                     self.h_resize, self.w_resize,
-                                     (crop_size, crop_size),
-                                     InterpolationMode.BILINEAR)
-
-        return self.rgb, self.anno, self.X, self.Y, self.Z
+    # def random_crop(self):
+    #     crop_size = self.config['Dataset']['transforms']['random_crop_size']
+    #     i, j, self.h_resize, self.w_resize = \
+    #         transforms.RandomResizedCrop.get_params(self.rgb, scale=(0.2, 1.),
+    #                                                 ratio=(3. / 4., 4. / 3.))
+    #     self.rgb = TF.resized_crop(self.rgb, i, j,
+    #                                self.h_resize, self.w_resize,
+    #                                (crop_size, crop_size),
+    #                                InterpolationMode.BILINEAR)
+    #     self.anno = TF.resized_crop(self.anno, i, j,
+    #                                 self.h_resize, self.w_resize,
+    #                                 (crop_size, crop_size),
+    #                                 InterpolationMode.NEAREST)
+    #
+    #     if self.X is None and self.Y is None and self.Z is None:
+    #         self.points_set, self.camera_coord, _ = crop_pointcloud(
+    #                                                         self.points_set,
+    #                                                         self.camera_coord,
+    #                                                         i, j,
+    #                                                         self.h_resize,
+    #                                                         self.w_resize)
+    #         self.X, self.Y, self.Z = get_resized_lid_img_val(self.h_resize,
+    #                                                          self.w_resize,
+    #                                                          self.points_set,
+    #                                                          self.camera_coord)
+    #     else:
+    #         self.X = TF.resized_crop(self.X, i, j,
+    #                                  self.h_resize, self.w_resize,
+    #                                  (crop_size, crop_size),
+    #                                  InterpolationMode.BILINEAR)
+    #         self.Y = TF.resized_crop(self.Y, i, j,
+    #                                  self.h_resize, self.w_resize,
+    #                                  (crop_size, crop_size),
+    #                                  InterpolationMode.BILINEAR)
+    #         self.Z = TF.resized_crop(self.Z, i, j,
+    #                                  self.h_resize, self.w_resize,
+    #                                  (crop_size, crop_size),
+    #                                  InterpolationMode.BILINEAR)
+    #
+    #     return self.rgb, self.anno, self.X, self.Y, self.Z
 
     def random_rotate(self):
         rotate_range = self.config['Dataset']['transforms']['random_rotate_range']
@@ -96,7 +95,7 @@ class AugmentShuffle(object):
         return self.rgb, self.anno, self.X, self.Y, self.Z
 
     def colour_jitter(self):
-        jitter_param = configs.JITTER_PARAM
+        jitter_param = self.config['Dataset']['transforms']['color_jitter']
         rgb_colour_jitter = transforms.ColorJitter(jitter_param[0],
                                                    jitter_param[1],
                                                    jitter_param[2],

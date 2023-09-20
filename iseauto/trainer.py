@@ -123,6 +123,10 @@ class Trainer(object):
 				union_cum += batch_union
 
 				loss = self.criterion(output_seg, batch['anno'])
+				#w_rgb = 1.1
+				#w_lid = 0.9
+				#loss = w_rgb*loss_rgb + w_lid*loss_lidar + loss_fusion
+
 				train_loss += loss.item()
 				loss.backward()
 				self.optimizer_dpt_scratch.step()

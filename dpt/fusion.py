@@ -31,6 +31,9 @@ class Fusion(nn.Module):
     def __init__(self, resample_dim):
         super(Fusion, self).__init__()
         self.res_conv1 = ResidualConvUnit(resample_dim)
+        #self.res_conv_xyz = ResidualConvUnit(resample_dim)
+        #self.res_conv_rgb = ResidualConvUnit(resample_dim)
+
         self.res_conv2 = ResidualConvUnit(resample_dim)
         #self.resample = nn.ConvTranspose2d(resample_dim, resample_dim, kernel_size=2, stride=2, padding=0, bias=True, dilation=1, groups=1)
 
@@ -40,5 +43,15 @@ class Fusion(nn.Module):
         output_stage1 = self.res_conv1(x)
         output_stage1 += previous_stage
         output_stage2 = self.res_conv2(output_stage1)
+
+        # def forward (self, X_rgb, X_xyz, previous_stage)
+
+        #out_stage1_rgb = self.conv_rgb(X_rbg)
+        #out_stage1_xyz = self.conv_rgb(X_xyz)
+        #
+
+
+
+
         output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
         return output_stage2

@@ -107,6 +107,7 @@ class Dataset(object):
 
         self.img_size = config['Dataset']['transforms']['resize']
         self.rgb_normalize = transforms.Compose([
+                        #transforms.RandomCrop(),
                         transforms.Resize((self.img_size, self.img_size)),
                         transforms.ToTensor(),
                         transforms.Normalize(

@@ -39,29 +39,23 @@ class Fusion(nn.Module):
 
     def forward(self, rgb, lidar, previous_stage=None, modal = 'rgb'):
         if previous_stage == None:
-            previous_stage = torch.zeros_like(x)
-        
-        
-        if modal == 'rgb':
-            output_stage1 = self.res_conv_rgb(rgb)
-            output_stage1 += previous_stage
-            output_stage2 = self.res_conv2(output_stage1)
+                previous_stage = torch.zeros_like(rgb)
 
-            output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
-            return output_stage2
-        
+        if modal == 'rgb':
+            output_stage1_rgb = self.res_conv_rgb(rgb)
+            output_stage1_lidar = torch.zeros_like(output_stage1_rgb)
         if modal == 'lidar':
-            output_stage1 = self.res_conv_xyz(lidar)
-            output_stage1 += previous_stage
-            output_stage2 = self.res_conv2(output_stage1)
-            output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
-            return output_stage2
-        
-        if modal == 'fusion':
+            output_stage1_lidar = self.res_conv_xyz(lidar)
+            output_stage1_rgb = torch.zeros_like(output_stage1_lidar)
+        if modal == 'fusion': 
             output_stage1_rgb = self.res_conv_rgb(rgb)
             output_stage1_lidar = self.res_conv_xyz(lidar)
-            output_stage1 = output_stage1_lidar + output_stage1_rgb + previous_stage
-            output_stage2 = self.res_conv2(output_stage1)
-           
-            output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
-            return output_stage2
+
+        output_stage1 = output_stage1_lidar + output_stage1_rgb + previous_stage
+        output_stage2 = self.res_conv2(output_stage1)
+        
+        output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
+        return output_stage2
+
+
+            

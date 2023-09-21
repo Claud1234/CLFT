@@ -93,57 +93,33 @@ class DPT(nn.Module):
         # x = torch.cat((cls_tokens, x), dim=1)
         # x += self.pos_embedding[:, :(n + 1)]
         # t = self.transformer_encoders(x)
-        if modal == 'rgb':
-            t = self.transformer_encoders(rgb)
-            previous_stage = None
-            for i in np.arange(len(self.fusions)-1, -1, -1):
-                hook_to_take = 't'+str(self.hooks[i])
-                activation_result = self.activation[hook_to_take]
+
+        t = self.transformer_encoders(lidar)
+        previous_stage = None
+        for i in np.arange(len(self.fusions)-1, -1, -1):
+            hook_to_take = 't'+str(self.hooks[i])
+            activation_result = self.activation[hook_to_take]
+            if modal == 'rgb':
                 reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
-                fusion_result = self.fusions[i](reassemble_result_RGB, 0, previous_stage, modal) #claude check here
-                previous_stage = fusion_result
-            out_depth = None
-            out_segmentation = None
-            if self.head_depth != None:
-                out_depth = self.head_depth(previous_stage)
-            if self.head_segmentation != None:
-                out_segmentation = self.head_segmentation(previous_stage)
-            return out_depth, out_segmentation
-        
-        if modal == 'lidar':
-            t = self.transformer_encoders(lidar)
-            previous_stage = None
-            for i in np.arange(len(self.fusions)-1, -1, -1):
-                hook_to_take = 't'+str(self.hooks[i])
-                activation_result = self.activation[hook_to_take]
+                reassemble_result_XYZ = torch.zeros_like(reassemble_result_RGB) # this is just to keep the space allocated but it will not be used later in fusion
+            if modal == 'lidar':
                 reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
-                fusion_result = self.fusions[i](0, reassemble_result_XYZ, previous_stage, modal) #claude check here
-                previous_stage = fusion_result
-            out_depth = None
-            out_segmentation = None
-            if self.head_depth != None:
-                out_depth = self.head_depth(previous_stage)
-            if self.head_segmentation != None:
-                out_segmentation = self.head_segmentation(previous_stage)
-            return out_depth, out_segmentation
-        
-        if modal == 'fusion':
-            t = self.transformer_encoders(lidar)
-            previous_stage = None
-            for i in np.arange(len(self.fusions)-1, -1, -1):
-                hook_to_take = 't'+str(self.hooks[i])
-                activation_result = self.activation[hook_to_take]
+                reassemble_result_RGB = torch.zeros_like(reassemble_result_XYZ) # this is just to keep the space allocated but it will not be used later in fusion
+            if modal == 'fusion':
                 reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
                 reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
-                fusion_result = self.fusions[i](reassemble_result_RGB, reassemble_result_XYZ, previous_stage, modal) #claude check here
-                previous_stage = fusion_result
-            out_depth = None
-            out_segmentation = None
-            if self.head_depth != None:
-                out_depth = self.head_depth(previous_stage)
-            if self.head_segmentation != None:
-                out_segmentation = self.head_segmentation(previous_stage)
-            return out_depth, out_segmentation
+            
+            fusion_result = self.fusions[i](reassemble_result_RGB, reassemble_result_XYZ, previous_stage, modal) #claude check here
+            previous_stage = fusion_result
+        out_depth = None
+        out_segmentation = None
+        if self.head_depth != None:
+            out_depth = self.head_depth(previous_stage)
+        if self.head_segmentation != None:
+            out_segmentation = self.head_segmentation(previous_stage)
+        return out_depth, out_segmentation
+        
+        
         
 
 

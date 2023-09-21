@@ -87,7 +87,7 @@ class Trainer(object):
 		weight_loss[2] = 10
 		self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
-	def train_dpt(self, train_dataloader, valid_dataloader):
+	def train_dpt(self, train_dataloader, valid_dataloader, modal = 'rgb'):
 		"""
 		The training of one epoch
 		"""
@@ -110,7 +110,7 @@ class Trainer(object):
 				self.optimizer_dpt_backbone.zero_grad()
 				self.optimizer_dpt_scratch.zero_grad()
 
-				_, output_seg = self.model(batch['rgb'], batch['lidar'], modal = 'rgb') #claude check here, modal has to be settable parameter in the json file
+				_, output_seg = self.model(batch['rgb'], batch['lidar'], modal = modal) #claude check here, modal has to be settable parameter in the json file
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				#print(output_seg.size())

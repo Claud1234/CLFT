@@ -105,7 +105,7 @@ class DPT(nn.Module):
             if modal == 'lidar':
                 reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
                 reassemble_result_RGB = torch.zeros_like(reassemble_result_XYZ) # this is just to keep the space allocated but it will not be used later in fusion
-            if modal == 'fusion':
+            if modal == 'cross_fusion':
                 reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
                 reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
             

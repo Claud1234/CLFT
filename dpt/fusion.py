@@ -47,7 +47,7 @@ class Fusion(nn.Module):
         if modal == 'lidar':
             output_stage1_lidar = self.res_conv_xyz(lidar)
             output_stage1_rgb = torch.zeros_like(output_stage1_lidar)
-        if modal == 'fusion': 
+        if modal == 'cross_fusion': 
             output_stage1_rgb = self.res_conv_rgb(rgb)
             output_stage1_lidar = self.res_conv_xyz(lidar)
 

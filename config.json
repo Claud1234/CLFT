@@ -1,7 +1,7 @@
 {
     "General":{
         "device":"cuda",
-        "sensor_modality": "rgb",
+        "sensor_modality": "lidar",
         "fcn": {
             "lr_rgb":0.00006,
             "lr_lidar":0.00006,
@@ -11,8 +11,8 @@
             "lr_fusion_semi":0.00003
         },
         "dpt": {
-            "lr_backbone":1e-5,
-            "lr_scratch":3e-4
+            "lr_backbone":6e-5,
+            "lr_scratch":6e-5
         },
         "type":"segmentation",
         "model_timm":"vit_base_patch16_384",
@@ -33,7 +33,7 @@
         "resume_training_model_path": "",
         "early_stop_patience": 50,
         "save_epoch": 10,
-        "model_path":"/media/nfs_client/training_logs/rgb/checkpoint_39.pth"
+        "model_path":"/media/nfs_client/training_logs/lidar/checkpoint_91.pth"
     },
     "Log": {
         "logdir_rgb": "/media/nfs_client/training_logs/rgb/",

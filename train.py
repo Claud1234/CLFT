@@ -65,6 +65,6 @@ valid_dataloader = DataLoader(valid_data,
 #                                 pin_memory=True,
 #                                 drop_last=True)
 
-trainer.train_dpt(train_dataloader, valid_dataloader)
+trainer.train_dpt(train_dataloader, valid_dataloader, modal = 'rgb')
 
 

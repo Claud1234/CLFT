@@ -78,7 +78,7 @@ class Tester(object):
 												   non_blocking=True)
 				batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-				_, output_seg = self.model(batch['rgb'])
+				_, output_seg = self.model(batch['lidar'])
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				anno = batch['anno']

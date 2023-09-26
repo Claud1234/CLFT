@@ -43,5 +43,5 @@ for data_category in list_datasets:
                                 shuffle=False,
                                 pin_memory=True,
                                 drop_last=True)
-tester.test_dpt(test_dataloader)
+    tester.test_dpt(test_dataloader)
 print('Testing is completed')

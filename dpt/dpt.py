@@ -14,7 +14,8 @@ torch.manual_seed(0)
 
 class DPT(nn.Module):
     def __init__(self,
-                 image_size=(3, 384, 384),
+                 RGB_tensor_size=(3, 384, 384),
+                 XYZ_tensor_size=(3, 384, 384),
                  patch_size=16,
                  emb_dim=1024,
                  resample_dim=256,
@@ -63,12 +64,15 @@ class DPT(nn.Module):
         self._get_layers_from_hooks(self.hooks)
 
         #Reassembles Fusion
-        self.reassembles = []
+        self.reassembles_RGB = []
+        self.reassembles_XYZ = []
         self.fusions = []
         for s in reassemble_s:
-            self.reassembles.append(Reassemble(image_size, read, patch_size, s, emb_dim, resample_dim))
+            self.reassembles_RGB.append(Reassemble(RGB_tensor_size, read, patch_size, s, emb_dim, resample_dim))
+            self.reassembles_XYZ.append(Reassemble(XYZ_tensor_size, read, patch_size, s, emb_dim, resample_dim))
             self.fusions.append(Fusion(resample_dim))
-        self.reassembles = nn.ModuleList(self.reassembles)
+        self.reassembles_RGB = nn.ModuleList(self.reassembles_RGB)
+        self.reassembles_XYZ = nn.ModuleList(self.reassembles_XYZ)
         self.fusions = nn.ModuleList(self.fusions)
 
         #Head
@@ -82,7 +86,7 @@ class DPT(nn.Module):
             self.head_depth = None
             self.head_segmentation = HeadSeg(resample_dim, nclasses=nclasses)
 
-    def forward(self, img):
+    def forward(self, rgb, lidar, modal = 'rgb'):
         # x = self.to_patch_embedding(img)
         # b, n, _ = x.shape
         # cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
@@ -90,13 +94,22 @@ class DPT(nn.Module):
         # x += self.pos_embedding[:, :(n + 1)]
         # t = self.transformer_encoders(x)
 
-        t = self.transformer_encoders(img)
+        t = self.transformer_encoders(lidar)
         previous_stage = None
         for i in np.arange(len(self.fusions)-1, -1, -1):
             hook_to_take = 't'+str(self.hooks[i])
             activation_result = self.activation[hook_to_take]
-            reassemble_result = self.reassembles[i](activation_result)
-            fusion_result = self.fusions[i](reassemble_result, previous_stage)
+            if modal == 'rgb':
+                reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
+                reassemble_result_XYZ = torch.zeros_like(reassemble_result_RGB) # this is just to keep the space allocated but it will not be used later in fusion
+            if modal == 'lidar':
+                reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
+                reassemble_result_RGB = torch.zeros_like(reassemble_result_XYZ) # this is just to keep the space allocated but it will not be used later in fusion
+            if modal == 'cross_fusion':
+                reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
+                reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
+            
+            fusion_result = self.fusions[i](reassemble_result_RGB, reassemble_result_XYZ, previous_stage, modal) #claude check here
             previous_stage = fusion_result
         out_depth = None
         out_segmentation = None
@@ -105,6 +118,10 @@ class DPT(nn.Module):
         if self.head_segmentation != None:
             out_segmentation = self.head_segmentation(previous_stage)
         return out_depth, out_segmentation
+        
+        
+        
+
 
     def _get_layers_from_hooks(self, hooks):
         def get_activation(name):

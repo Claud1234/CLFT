@@ -6,10 +6,26 @@ import torch
 import numpy as np
 
 
+label_colors_list = [
+        (255, 0, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+        (100, 100, 100)]
+
+# all the classes that are present in the dataset
+ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
+
+"""
+This (`class_values`) assigns a specific class label to each of the classes.
+For example, `vehicle=0`, `human=1`, and so on.
+"""
+class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
+
+
 def creat_dir(config):
     logdir_rgb = config['Log']['logdir_rgb']
-    logdir_lidar = config['Log']['logdir_rgb']
-    logdir_fusion = config['Log']['logdir_rgb']
+    logdir_lidar = config['Log']['logdir_lidar']
+    logdir_fusion = config['Log']['logdir_fusion']
     if not os.path.exists(logdir_rgb):
         os.makedirs(logdir_rgb)
         print(f'Making log directory {logdir_rgb}...')
@@ -26,22 +42,6 @@ def creat_dir(config):
         os.makedirs(logdir_lidar + 'progress_save')
     if not os.path.exists(logdir_fusion + 'progress_save'):
         os.makedirs(logdir_fusion + 'progress_save')
-
-
-label_colors_list = [
-        (255, 0, 0),
-        (0, 255, 0),
-        (0, 0, 255),
-        (100, 100, 100)]
-
-# all the classes that are present in the dataset
-ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
-
-"""
-This (`class_values`) assigns a specific class label to each of the classes.
-For example, `vehicle=0`, `human=1`, and so on.
-"""
-class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
 def waymo_anno_class_relabel(annotation):
@@ -156,19 +156,29 @@ def save_model_dict(config, epoch, model,
                 'logdir_fusion'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
 
 
-def adjust_learning_rate(config, model, optimizer, epoch, epoch_max):
+def adjust_learning_rate(config, optimizer_backbone, optimizer_scratch, epoch):
     """Decay the learning rate based on schedule"""
-    if model == 'rgb':
-        lr = config['General']['fcn']['lr_rgb'] * (1 - epoch/epoch_max)**0.9
-    elif model == 'lidar':
-        lr = config['General']['fcn']['lr_lidar'] * (1 - epoch/epoch_max)**0.9
-    elif model == 'fusion':
+    epoch_max = config['General']['epochs']
+    if config['General']['sensor_modality'] == 'rgb':
+        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
+                                                        epoch/epoch_max)**0.9
+        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
+                                                        epoch/epoch_max)**0.9
+    elif config['General']['sensor_modality'] == 'lidar':
+        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
+                                                        epoch/epoch_max)**0.9
+        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
+                                                        epoch/epoch_max)**0.9
+    elif config['General']['sensor_modality'] == 'fusion':
         lr = config['General']['fcn']['lr_fusion'] * (1 - epoch/epoch_max)**0.9
 
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+    for param_group in optimizer_backbone.param_groups:
+        param_group['lr'] = lr_backbone
 
-    return lr
+    for param_group in optimizer_scratch.param_groups:
+        param_group['lr'] = lr_scratch
+
+    return lr_backbone, lr_scratch
 
 
 def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
@@ -212,7 +222,7 @@ class EarlyStopping(object):
                  optimizer_scratch):
         if self.min_param is None:
             self.min_param = valid_param
-        elif valid_param > self.min_param:
+        elif valid_param < self.min_param:
             self.count += 1
             print(f'Early Stopping Counter: {self.count} of {self.patience}')
             if self.count >= self.patience:

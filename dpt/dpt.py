@@ -54,7 +54,7 @@ class DPT(nn.Module):
         # encoder_layer = nn.TransformerEncoderLayer(d_model=emb_dim, nhead=nhead, dropout=transformer_dropout, dim_feedforward=emb_dim*4)
         # self.transformer_encoders = nn.TransformerEncoder(encoder_layer, num_layers=num_layers_encoder)
         self.transformer_encoders = timm.create_model(model_timm,
-                                                      pretrained=False)
+                                                      pretrained=True)
         self.type_ = type
 
         #Register hooks

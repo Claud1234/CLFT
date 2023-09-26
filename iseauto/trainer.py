@@ -4,7 +4,6 @@
 import os
 import sys
 import torch
-import cv2
 import torch.nn as nn
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -15,6 +14,7 @@ from utils.metrics import find_overlap
 from dpt.dpt import DPT
 from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
+from utils.helpers import adjust_learning_rate
 
 writer = SummaryWriter()
 
@@ -80,9 +80,9 @@ class Trainer(object):
 		self.nclasses = len(config['Dataset']['classes'])
 		weight_loss = torch.Tensor(self.nclasses).fill_(0)
 		# define weight of different classes, 0-background, 1-car, 2-people.
-		weight_loss[3] = 1
+		weight_loss[3] = 0
 		weight_loss[0] = 1
-		weight_loss[1] = 3
+		weight_loss[1] = 4
 		weight_loss[2] = 10
 		self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
@@ -93,9 +93,13 @@ class Trainer(object):
 		epochs = self.config['General']['epochs']
 		early_stopping = EarlyStopping(self.config)
 		self.model.train()
-
 		for epoch in range(epochs):
-			print('Epoch: {:.0f}'.format(epoch+1))
+			lr_b, lr_s = adjust_learning_rate(self.config,
+										self.optimizer_dpt_backbone,
+										self.optimizer_dpt_scratch,
+										epoch)
+			print('Epoch: {:.0f}, LR_B: {:.6f}, LR_S: {:.6f}'.format(epoch+1,
+																	 lr_b, lr_s))
 			print('Training...')
 			train_loss = 0.0
 			overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
@@ -109,7 +113,7 @@ class Trainer(object):
 				self.optimizer_dpt_backbone.zero_grad()
 				self.optimizer_dpt_scratch.zero_grad()
 
-				_, output_seg = self.model(batch['rgb'])
+				_, output_seg = self.model(batch['lidar'])
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				#print(output_seg.size())
@@ -148,19 +152,22 @@ class Trainer(object):
 			valid_epoch_loss, valid_epoch_IoU = self.validate_dpt(
 														valid_dataloader)
 
-			# Plot the train and validation loss in Tensorboard
-			# writer.add_scalars('Loss', {'train': train_epoch_loss,
-			# 							'valid': valid_epoch_loss}, epoch)
-			# # Plot the train and validation IoU in Tensorboard
-			# writer.add_scalars('Vehicle_IoU',
-			# 				   {'train': train_epoch_IoU[0],
-			# 					'valid': valid_epoch_IoU[0]}, epoch)
-			# writer.add_scalars('Human_IoU',
-			# 				   {'train': train_epoch_IoU[1],
-			# 					'valid': valid_epoch_IoU[1]}, epoch)
-			# writer.close()
+			# self.scheduler_backbone.step(valid_epoch_loss)
+			# self.scheduler_scratch.step(valid_epoch_loss)
 
-			early_stopping(valid_epoch_loss, epoch, self.model,
+			# Plot the train and validation loss in Tensorboard
+			writer.add_scalars('Loss', {'train': train_epoch_loss,
+										'valid': valid_epoch_loss}, epoch)
+			# Plot the train and validation IoU in Tensorboard
+			writer.add_scalars('Vehicle_IoU',
+							   {'train': train_epoch_IoU[0],
+								'valid': valid_epoch_IoU[0]}, epoch)
+			writer.add_scalars('Human_IoU',
+							   {'train': train_epoch_IoU[1],
+								'valid': valid_epoch_IoU[1]}, epoch)
+			writer.close()
+
+			early_stopping(valid_epoch_IoU[0], epoch, self.model,
 						   self.optimizer_dpt_backbone,
 						   self.optimizer_dpt_scratch)
 			if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and
@@ -190,7 +197,7 @@ class Trainer(object):
 												   non_blocking=True)
 				batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-				_, output_seg = self.model(batch['rgb'])
+				_, output_seg = self.model(batch['lidar'])
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				anno = batch['anno']
@@ -206,7 +213,7 @@ class Trainer(object):
 				loss = self.criterion(output_seg, batch['anno'])
 				valid_loss += loss.item()
 				progress_bar.set_description(f'valid fusion loss:'
-											 f'{valid_loss:.4f}')
+											 f'{loss:.4f}')
 		# The IoU of one epoch
 		valid_epoch_IoU = overlap_cum / union_cum
 		print(

@@ -57,8 +57,8 @@ class Trainer(object):
 		elif args.backbone == 'dpt':
 			resize = config['Dataset']['transforms']['resize']
 			self.model = DPT(
-				RGB_tensor_size =(3, resize, resize),
-				XYZ_tensor_size =(3, resize, resize),
+				RGB_tensor_size=(3, resize, resize),
+				XYZ_tensor_size=(3, resize, resize),
 				emb_dim=config['General']['emb_dim'],
 				resample_dim=config['General']['resample_dim'],
 				read=config['General']['read'],
@@ -81,7 +81,7 @@ class Trainer(object):
 		self.nclasses = len(config['Dataset']['classes'])
 		weight_loss = torch.Tensor(self.nclasses).fill_(0)
 		# define weight of different classes, 0-background, 1-car, 2-people.
-		weight_loss[3] = 0
+		#weight_loss[3] = 0
 		weight_loss[0] = 1
 		weight_loss[1] = 4
 		weight_loss[2] = 10

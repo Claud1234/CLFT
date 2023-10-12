@@ -118,7 +118,7 @@ def save_model_dict(config, epoch, model,
                         'optimizer_scratch_state_dict':
                             optimizer_scratch.state_dict()},
                        config['Log']['logdir_lidar']+f"checkpoint_{epoch}.pth")
-        elif sensor_modality == 'fusion':
+        elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
                         'optimizer_backbone_state_dict':
@@ -145,7 +145,7 @@ def save_model_dict(config, epoch, model,
                             optimizer_scratch.state_dict()},
                        config['Log'][
                 'logdir_lidar'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
-        elif sensor_modality == 'fusion':
+        elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
                         'optimizer_backbone_state_dict':
@@ -169,8 +169,11 @@ def adjust_learning_rate(config, optimizer_backbone, optimizer_scratch, epoch):
                                                         epoch/epoch_max)**0.9
         lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
                                                         epoch/epoch_max)**0.9
-    elif config['General']['sensor_modality'] == 'fusion':
-        lr = config['General']['fcn']['lr_fusion'] * (1 - epoch/epoch_max)**0.9
+    elif config['General']['sensor_modality'] == 'cross_fusion':
+        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
+                                                        epoch/epoch_max)**0.9
+        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
+                                                        epoch/epoch_max)**0.9
 
     for param_group in optimizer_backbone.param_groups:
         param_group['lr'] = lr_backbone

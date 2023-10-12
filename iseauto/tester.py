@@ -37,7 +37,8 @@ class Tester(object):
 		elif args.backbone == 'dpt':
 			resize = config['Dataset']['transforms']['resize']
 			self.model = DPT(
-				image_size=(3, resize, resize),
+				RGB_tensor_size =(3, resize, resize),
+				XYZ_tensor_size =(3, resize, resize),
 				emb_dim=config['General']['emb_dim'],
 				resample_dim=config['General']['resample_dim'],
 				read=config['General']['read'],

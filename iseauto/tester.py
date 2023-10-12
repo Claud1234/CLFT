@@ -37,8 +37,8 @@ class Tester(object):
 		elif args.backbone == 'dpt':
 			resize = config['Dataset']['transforms']['resize']
 			self.model = DPT(
-				RGB_tensor_size =(3, resize, resize),
-				XYZ_tensor_size =(3, resize, resize),
+				RGB_tensor_size=(3, resize, resize),
+				XYZ_tensor_size=(3, resize, resize),
 				emb_dim=config['General']['emb_dim'],
 				resample_dim=config['General']['resample_dim'],
 				read=config['General']['read'],
@@ -60,9 +60,10 @@ class Tester(object):
 		self.nclasses = len(config['Dataset']['classes'])
 		self.model.eval()
 
-	def test_dpt(self, test_dataloader):
+	def test_dpt(self, test_dataloader, modal):
 		print('Testing...')
 		overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
+		modality = modal
 		with torch.no_grad():
 			progress_bar = tqdm(test_dataloader)
 
@@ -79,7 +80,8 @@ class Tester(object):
 												   non_blocking=True)
 				batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-				_, output_seg = self.model(batch['lidar'])
+				_, output_seg = self.model(batch['rgb'], batch['lidar'],
+										   modality)
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				anno = batch['anno']

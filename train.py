@@ -33,6 +33,7 @@ np.random.seed(config['General']['seed'])
 trainer = Trainer(config, args)
 
 list_datasets = config['Dataset']['paths']['list_datasets']
+modality = config['General']['sensor_modality']
 
 datasets_train = []
 for data_category in list_datasets:
@@ -54,17 +55,7 @@ valid_dataloader = DataLoader(valid_data,
                               pin_memory=True,
                               drop_last=True)
 #print('**************************************')
-# datasets_test = []
-# for data_category in list_datasets:
-#     print(f'Testing with the subset {data_category}......')
-#     datasets_test = Dataset(config, data_category, 'test')
-#
-#     test_dataloader = DataLoader(datasets_test,
-#                                 batch_size=config['General']['batch_size'],
-#                                 shuffle=False,
-#                                 pin_memory=True,
-#                                 drop_last=True)
 
-trainer.train_dpt(train_dataloader, valid_dataloader, modal = 'rgb')
+trainer.train_dpt(train_dataloader, valid_dataloader, modal=modality)
 
 

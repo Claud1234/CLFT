@@ -87,11 +87,12 @@ class Trainer(object):
 		weight_loss[2] = 10
 		self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
-	def train_dpt(self, train_dataloader, valid_dataloader, modal = 'rgb'):
+	def train_dpt(self, train_dataloader, valid_dataloader, modal):
 		"""
 		The training of one epoch
 		"""
 		epochs = self.config['General']['epochs']
+		modality = modal
 		early_stopping = EarlyStopping(self.config)
 		self.model.train()
 		for epoch in range(epochs):
@@ -114,7 +115,8 @@ class Trainer(object):
 				self.optimizer_dpt_backbone.zero_grad()
 				self.optimizer_dpt_scratch.zero_grad()
 
-				_, output_seg = self.model(batch['rgb'], batch['lidar'], modal = modal) #claude check here, modal has to be settable parameter in the json file
+				_, output_seg = self.model(batch['rgb'], batch['lidar'],
+										   modality)
 
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
@@ -152,7 +154,8 @@ class Trainer(object):
 				f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
 
 			valid_epoch_loss, valid_epoch_IoU = self.validate_dpt(
-														valid_dataloader)
+														valid_dataloader,
+														modality)
 
 			# self.scheduler_backbone.step(valid_epoch_loss)
 			# self.scheduler_scratch.step(valid_epoch_loss)
@@ -183,7 +186,7 @@ class Trainer(object):
 				break
 		print('Training Complete')
 
-	def validate_dpt(self, valid_dataloader):
+	def validate_dpt(self, valid_dataloader, modal):
 		"""
 			The validation of one epoch
 		"""
@@ -199,8 +202,8 @@ class Trainer(object):
 												   non_blocking=True)
 				batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-				_, output_seg = self.model(batch['rgb'], batch['lidar'], modal = 'rgb') #claude check here, modal has to be settable parameter in the json file
-
+				_, output_seg = self.model(batch['rgb'], batch['lidar'],
+										   modal)
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
 				anno = batch['anno']

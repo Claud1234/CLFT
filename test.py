@@ -32,8 +32,8 @@ args = parser.parse_args()
 np.random.seed(config['General']['seed'])
 tester = Tester(config, args)
 
-
 list_datasets = config['Dataset']['paths']['list_datasets']
+modality = config['General']['sensor_modality']
 datasets_test = []
 for data_category in list_datasets:
     print(f'Testing with the subset {data_category}......')
@@ -43,5 +43,5 @@ for data_category in list_datasets:
                                 shuffle=False,
                                 pin_memory=True,
                                 drop_last=True)
-    tester.test_dpt(test_dataloader)
+    tester.test_dpt(test_dataloader, modality)
 print('Testing is completed')

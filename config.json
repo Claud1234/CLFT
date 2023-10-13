@@ -1,11 +1,11 @@
 {
     "General":{
         "device":"cuda",
-        "sensor_modality": "lidar",
+        "sensor_modality": "cross_fusion",
         "fcn": {
             "lr_rgb":0.00006,
             "lr_lidar":0.00006,
-            "lr_fusion":0.000087,
+            "lr_fusion":0.00007,
             "lr_rgb_semi":0.000003,
             "lr_lidar_semi":0.000003,
             "lr_fusion_semi":0.00003
@@ -15,7 +15,7 @@
             "lr_scratch":6e-5
         },
         "type":"segmentation",
-        "model_timm":"vit_base_patch16_384",
+        "model_timm":"vit_base_resnet50_384",
         "emb_dim":768,
         "hooks":[2, 5, 8, 11],
         "read":"projection",
@@ -24,8 +24,8 @@
         "loss_depth":"ssi",
         "loss_segmentation":"ce",
         "momentum":0.9,
-        "epochs":200,
-        "batch_size":24,
+        "epochs":100,
+        "batch_size":16,
         "path_predicted_images":"output",
         "seed":0,
         "patch_size":16,
@@ -33,7 +33,7 @@
         "resume_training_model_path": "",
         "early_stop_patience": 50,
         "save_epoch": 10,
-        "model_path":"/media/nfs_client/training_logs/lidar/checkpoint_91.pth"
+        "model_path":"/media/nfs_client/training_logs/fusion/checkpoint_69.pth"
     },
     "Log": {
         "logdir_rgb": "/media/nfs_client/training_logs/rgb/",
@@ -41,12 +41,12 @@
         "logdir_fusion": "/media/nfs_client/training_logs/fusion/"
     },
     "Dataset":{
-        "name": "waymo",
+        "name": "iseauto",
         "paths":{
-            "path_dataset":"/home/autolab/claude/dataset/mauro_waymo/labeled",
+            "path_dataset":"/home/autolab/claude/dataset/claude_iseauto/labeled",
             "list_datasets":["day_fair", "day_rain", "night_fair", "night_rain"],
             "path_rgb":"rgb",
-            "path_anno":"annotation_rgb",
+            "path_anno":"annotation_gray",
             "path_lidar":"pkl"
         },
         "splits":{
@@ -61,7 +61,7 @@
             "image_std":[0.229, 0.224, 0.225],
             "lidar_mean_waymo":[-0.17263354, 0.85321806, 24.5527253],
             "lidar_std_waymo":[7.34546552, 1.17227659, 15.83745082],
-            "lidar_mean_iseatuo":[-0.079, 0.033, 15.90],
+            "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
             "lidar_std_iseauto":[7.79,  2.156, 7.60],
             "random_crop_size":128,
             "random_rotate_range":20,

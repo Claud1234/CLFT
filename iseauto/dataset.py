@@ -149,14 +149,14 @@ class Dataset(object):
                     'lidar_mean_waymo'])
 
         elif self.config['Dataset']['name'] == 'iseauto':
-            rgb = self.rgb_normalize(Image.open(self.paths_rgb[idx]))
+            rgb = Image.open(self.paths_rgb[idx])
             anno = torch.from_numpy(
-                Image.open(self.paths_anno[idx])).unsqueeze(0).long()
-            anno = self.anno_resize(anno)
+                np.array(Image.open(self.paths_anno[idx]))).unsqueeze(0).long()
+
             points_set, camera_coord = open_lidar(
                 self.paths_lidar[idx],
-                w_ratio=8.84,
-                h_ratio=8.825,
+                w_ratio=11,
+                h_ratio=7.354,
                 lidar_mean=self.config['Dataset']['transforms'][
                     'lidar_mean_iseauto'],
                 lidar_std=self.config['Dataset']['transforms'][

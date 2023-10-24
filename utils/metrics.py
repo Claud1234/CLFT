@@ -28,6 +28,7 @@ recall(2) = d / (b + d)
 
 def find_overlap(n_classes, output, anno):
     '''
+    :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
@@ -37,8 +38,8 @@ def find_overlap(n_classes, output, anno):
     n_classes = n_classes - 1
     # Return each pixel value as either 0 or 1 or 2 or 3, which
     # represent different classes.
-    _, pred_indices = torch.max(output, 1)  # (8, 160, 480)
-#    print(pred_indices.size())
+    _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
+    #print(anno.size())
 
     pred_indices[anno == 3] = 0
 

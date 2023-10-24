@@ -236,7 +236,7 @@ class EarlyStopping(object):
                 print('Saving Model Complete')
                 print('Early Stopping Triggered!')
         else:
-            print(f'Validation Loss decreased from {self.min_param:.4f} ' +
+            print(f'Vehicle IoU increased from {self.min_param:.4f} ' +
                   f'to {valid_param:.4f}')
             self.min_param = valid_param
             save_model_dict(self.config, epoch, model,

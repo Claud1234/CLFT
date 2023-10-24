@@ -120,11 +120,13 @@ class Trainer(object):
 
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
+				#print(output_seg)
 				#print(output_seg.size())
 				anno = batch['anno']
+				# print(1 in anno)
 				batch_overlap, batch_pred, batch_label, batch_union = \
 					find_overlap(self.nclasses, output_seg, anno)
-
+				#print(batch_label)
 				overlap_cum += batch_overlap
 				pred_cum += batch_pred
 				label_cum += batch_label

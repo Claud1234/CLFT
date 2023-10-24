@@ -108,7 +108,8 @@ class Dataset(object):
         self.img_size = config['Dataset']['transforms']['resize']
         self.rgb_normalize = transforms.Compose([
                         #transforms.RandomCrop(),
-                        transforms.Resize((self.img_size, self.img_size)),
+                        transforms.Resize((self.img_size, self.img_size),
+                        interpolation=transforms.InterpolationMode.BILINEAR),
                         transforms.ToTensor(),
                         transforms.Normalize(
                             mean=config['Dataset']['transforms']['image_mean'],
@@ -132,10 +133,9 @@ class Dataset(object):
         assert (rgb_name == lidar_name), "rgb and lidar input not matching"
 
         if self.config['Dataset']['name'] == 'waymo':
+            # waymo rgb and anno is in 480x320, lidar is in 1920x1280
             rgb = Image.open(self.paths_rgb[idx]).convert('RGB')
 
-            # rgb = self.rgb_normalize(Image.open(self.paths_rgb[idx]).convert(
-            #     'RGB'))
             anno = waymo_anno_class_relabel(
                 Image.open(self.paths_anno[idx]))  # Tensor [1, H, W]
 
@@ -149,14 +149,16 @@ class Dataset(object):
                     'lidar_mean_waymo'])
 
         elif self.config['Dataset']['name'] == 'iseauto':
-            rgb = Image.open(self.paths_rgb[idx])
-            anno = torch.from_numpy(
-                np.array(Image.open(self.paths_anno[idx]))).unsqueeze(0).long()
+            rgb = Image.open(self.paths_rgb[idx]).resize((480, 320),
+                                                         Image.BILINEAR)
+            anno = Image.open(self.paths_anno[idx]).resize((480, 320),
+                                                         Image.BILINEAR)
+            anno = torch.from_numpy(np.array(anno)).unsqueeze(0).long()
 
             points_set, camera_coord = open_lidar(
                 self.paths_lidar[idx],
-                w_ratio=11,
-                h_ratio=7.354,
+                w_ratio=8.84,
+                h_ratio=8.825,
                 lidar_mean=self.config['Dataset']['transforms'][
                     'lidar_mean_iseauto'],
                 lidar_std=self.config['Dataset']['transforms'][
@@ -169,39 +171,54 @@ class Dataset(object):
         rgb_orig = rgb.copy()
         w_orig, h_orig = rgb.size  # PIL tuple. (w, h)
         delta = int(h_orig/2)
-        rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)  # PIL (W, H)
-        anno = TF.crop(anno, delta, 0, h_orig-delta, w_orig)  # Tensor (1, H, W)
-        points_set, camera_coord, _ = crop_pointcloud(points_set,
-                                                      camera_coord,
-                                                      delta, 0,
-                                                      h_orig-delta,
-                                                      w_orig)
-        # print(points_set.size)
-        # print(camera_coord[:, 0])
+        top_crop_rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)  # PIL (
+        # W, H)
+        top_crop_anno = TF.crop(anno, delta, 0, h_orig-delta, w_orig)  # Tensor
+        # (1,
+        # H, W)
+        #print(1 in anno)
+        top_crop_points_set, top_crop_camera_coord, _ = crop_pointcloud(
+                                                                  points_set,
+                                                                  camera_coord,
+                                                                  delta, 0,
+                                                                  h_orig-delta,
+                                                                  w_orig)
 
-        # data_augment = AugmentShuffle(self.config, rgb, anno, points_set,
-        #                               camera_coord)
-        #
-        # if self.config['Dataset']['transforms']['augment_sequence_shuffle']:
-        #     aug_list = ['random_crop', 'random_rotate', 'colour_jitter',
-        #                 'random_horizontal_flip', 'random_vertical_flip']
-        #     random.shuffle(aug_list)
-        #     print(aug_list)
-        #
-        #     for i in range(len(aug_list)):
-        #         augment_proc = getattr(data_augment, aug_list[i])
-        #         rgb, anno, X, Y, Z = augment_proc()
-        #
-        # else:
-        #     #rgb, anno, X, Y, Z = data_augment.random_crop()
-        #     rgb, anno, X, Y, Z = data_augment.random_rotate()
-        #     rgb, anno, X, Y, Z = data_augment.colour_jitter()
-        #     rgb, anno, X, Y, Z = data_augment.random_horizontal_flip()
-        #     rgb, anno, X, Y, Z = data_augment.random_vertical_flip()
-        # print(rgb.size())
+        if self.config['Dataset']['transforms']['augment'] is True:
+            return
+            # print(points_set.size)
+            # print(camera_coord[:, 0])
 
-        w, h = rgb.size
-        X, Y, Z = get_unresized_lid_img_val(h, w, points_set, camera_coord)
+            # data_augment = AugmentShuffle(self.config, rgb, anno, points_set,
+            #                               camera_coord)
+            #
+            # if self.config['Dataset']['transforms']['augment_sequence_shuffle']:
+            #     aug_list = ['random_crop', 'random_rotate', 'colour_jitter',
+            #                 'random_horizontal_flip', 'random_vertical_flip']
+            #     random.shuffle(aug_list)
+            #     print(aug_list)
+            #
+            #     for i in range(len(aug_list)):
+            #         augment_proc = getattr(data_augment, aug_list[i])
+            #         rgb, anno, X, Y, Z = augment_proc()
+            #
+            # else:
+            #     #rgb, anno, X, Y, Z = data_augment.random_crop()
+            #     rgb, anno, X, Y, Z = data_augment.random_rotate()
+            #     rgb, anno, X, Y, Z = data_augment.colour_jitter()
+            #     rgb, anno, X, Y, Z = data_augment.random_horizontal_flip()
+            #     rgb, anno, X, Y, Z = data_augment.random_vertical_flip()
+            # print(rgb.size())
+
+        else:  # no augment, all input data are only top cropped
+            rgb = top_crop_rgb
+            anno = top_crop_anno
+            points_set = top_crop_points_set
+            camera_coord = top_crop_camera_coord
+
+            w, h = rgb.size
+            # X, Y, Z are the PIL images
+            X, Y, Z = get_unresized_lid_img_val(h, w, points_set, camera_coord)
 
         rgb = self.rgb_normalize(rgb)  # Tensor [3, 384, 384]
         anno = self.anno_resize(anno).squeeze(0)  # Tensor

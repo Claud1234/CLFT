@@ -7,6 +7,7 @@ Created on May 13rd, 2021
 """
 import os
 import sys
+import cv2
 import random
 import numpy as np
 from glob import glob
@@ -55,6 +56,18 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
                                config['Dataset']['paths']['path_anno'],
                                im[:-4]+'.png') for im in selected_files]
     return paths_rgb, paths_lidar, paths_anno
+
+
+def lidar_dilation(X, Y, Z):
+    kernel = np.ones((3, 3), np.uint8)
+    X_dilation = cv2.dilate(np.array(X), kernel, iterations=1)
+    Y_dilation = cv2.dilate(np.array(Y), kernel, iterations=1)
+    Z_dilation = cv2.dilate(np.array(Z), kernel, iterations=1)
+
+    X_dilation = TF.to_pil_image(X_dilation.astype(np.float32))
+    Y_dilation = TF.to_pil_image(Y_dilation.astype(np.float32))
+    Z_dilation = TF.to_pil_image(Z_dilation.astype(np.float32))
+    return X_dilation, Y_dilation, Z_dilation
 
 
 class Dataset(object):
@@ -219,6 +232,8 @@ class Dataset(object):
             w, h = rgb.size
             # X, Y, Z are the PIL images
             X, Y, Z = get_unresized_lid_img_val(h, w, points_set, camera_coord)
+
+        X, Y, Z = lidar_dilation(X, Y, Z)
 
         rgb = self.rgb_normalize(rgb)  # Tensor [3, 384, 384]
         anno = self.anno_resize(anno).squeeze(0)  # Tensor

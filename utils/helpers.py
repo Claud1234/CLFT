@@ -96,92 +96,55 @@ def image_overlay(image, segmented_image):
     return image
 
 
-def save_model_dict(config, epoch, model,
-                    optimizer_backbone, optimizer_scratch,
-                    save_check=False):
+def save_model_dict(config, epoch, model, optimizer, save_check=False):
     sensor_modality = config['General']['sensor_modality']
     creat_dir(config)
     if save_check is False:
         if sensor_modality == 'rgb':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_rgb']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_lidar']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_fusion']+f"checkpoint_{epoch}.pth")
     else:
         if sensor_modality == 'rgb':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                     config['Log'][
                 'logdir_rgb']+'progress_save/'+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                        config['Log'][
                 'logdir_lidar'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch+1,
                         'model_state_dict': model.state_dict(),
-                        'optimizer_backbone_state_dict':
-                            optimizer_backbone.state_dict(),
-                        'optimizer_scratch_state_dict':
-                            optimizer_scratch.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict()},
                        config['Log'][
                 'logdir_fusion'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
 
 
-def adjust_learning_rate(config, optimizer_backbone, optimizer_scratch, epoch):
+def adjust_learning_rate(config, optimizer, epoch):
     """Decay the learning rate based on schedule"""
     epoch_max = config['General']['epochs']
-    if config['General']['sensor_modality'] == 'rgb':
-        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
-                                                        epoch/epoch_max)**0.9
-        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
-                                                        epoch/epoch_max)**0.9
-    elif config['General']['sensor_modality'] == 'lidar':
-        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
-                                                        epoch/epoch_max)**0.9
-        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
-                                                        epoch/epoch_max)**0.9
-    elif config['General']['sensor_modality'] == 'cross_fusion':
-        lr_backbone = config['General']['dpt']['lr_backbone'] * (1 -
-                                                        epoch/epoch_max)**0.9
-        lr_scratch = config['General']['dpt']['lr_scratch'] * (1 -
-                                                        epoch/epoch_max)**0.9
+    lr = config['General']['dpt_lr'] * (1-epoch/epoch_max)**0.9
 
-    for param_group in optimizer_backbone.param_groups:
-        param_group['lr'] = lr_backbone
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
-    for param_group in optimizer_scratch.param_groups:
-        param_group['lr'] = lr_scratch
-
-    return lr_backbone, lr_scratch
+    return lr
 
 
 def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
@@ -221,8 +184,7 @@ class EarlyStopping(object):
         self.early_stop_trigger = False
         self.count = 0
 
-    def __call__(self, valid_param, epoch, model, optimizer_backbone,
-                 optimizer_scratch):
+    def __call__(self, valid_param, epoch, model, optimizer):
         if self.min_param is None:
             self.min_param = valid_param
         elif valid_param <= self.min_param:
@@ -231,15 +193,13 @@ class EarlyStopping(object):
             if self.count >= self.patience:
                 self.early_stop_trigger = True
                 print('Saving model for last epoch...')
-                save_model_dict(self.config, epoch, model,
-                                optimizer_backbone, optimizer_scratch, True)
+                save_model_dict(self.config, epoch, model, optimizer, True)
                 print('Saving Model Complete')
                 print('Early Stopping Triggered!')
         else:
             print(f'Vehicle IoU increased from {self.min_param:.4f} ' +
                   f'to {valid_param:.4f}')
             self.min_param = valid_param
-            save_model_dict(self.config, epoch, model,
-                            optimizer_backbone, optimizer_scratch)
+            save_model_dict(self.config, epoch, model, optimizer)
             print('Saving Model...')
             self.count = 0

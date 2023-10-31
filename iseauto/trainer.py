@@ -20,8 +20,11 @@ writer = SummaryWriter()
 
 
 def get_optimizer_dpt(config, net):
-	names = set([name.split('.')[0] for name, _ in net.named_modules()]) - \
-			{'', 'transformer_encoders'}
+	for name, _ in net.named_modules():
+		print(name)
+	names = (set([name.split('.')[0] for name, _ in net.named_modules()]) -
+			 {'', 'transformer_encoders'})
+
 	params_backbone = net.transformer_encoders.parameters()
 	params_scratch = list()
 	for name in names:
@@ -68,10 +71,12 @@ class Trainer(object):
 				type=self.type,
 				patch_size=config['General']['patch_size'], )
 			print(f'Using backbone {args.backbone}')
-			self.optimizer_dpt_backbone, self.optimizer_dpt_scratch = \
-				get_optimizer_dpt(config, self.model)
-			self.scheduler_backbone = ReduceLROnPlateau(self.optimizer_dpt_backbone)
-			self.scheduler_scratch = ReduceLROnPlateau(self.optimizer_dpt_scratch)
+			self.optimizer_dpt = torch.optim.Adam(self.model.parameters(),
+								   lr=config['General']['dpt_lr'])
+			# self.optimizer_dpt_backbone, self.optimizer_dpt_scratch = \
+			# 	get_optimizer_dpt(config, self.model)
+			# self.scheduler_backbone = ReduceLROnPlateau(self.optimizer_dpt_backbone)
+			# self.scheduler_scratch = ReduceLROnPlateau(self.optimizer_dpt_scratch)
 
 		else:
 			sys.exit("A backbone must be specified! (dpt or fcn)")
@@ -90,7 +95,7 @@ class Trainer(object):
 		if self.config['General']['resume_training'] is True:
 			print('Resume training...')
 			model_path = self.config['General']['resume_training_model_path']
-			checkpoint = torch.load(model_path)
+			checkpoint = torch.load(model_path, map_location=self.device)
 
 			if self.config['General']['reset_lr'] is True:
 				print('Reset the epoch to 0')
@@ -110,14 +115,10 @@ class Trainer(object):
 				print('Loading trained model weights...')
 				self.model.load_state_dict(checkpoint['model_state_dict'])
 				print('Loading trained optimizer...')
-				self.optimizer_dpt_scratch.load_state_dict(checkpoint[
-					'optimizer_scratch_state_dict'])
-				self.optimizer_dpt_backbone.load_state_dict(checkpoint[
-					'optimizer_backbone_state_dict'])
+				self.optimizer_dpt.load_state_dict(checkpoint['optimizer_state_dict'])
 
-		elif args.resume_training == 'no':
+		else:
 			print('Training from the beginning')
-			finished_epochs = 0
 
 	def train_dpt(self, train_dataloader, valid_dataloader, modal):
 		"""
@@ -128,12 +129,8 @@ class Trainer(object):
 		early_stopping = EarlyStopping(self.config)
 		self.model.train()
 		for epoch in range(epochs):
-			lr_b, lr_s = adjust_learning_rate(self.config,
-										self.optimizer_dpt_backbone,
-										self.optimizer_dpt_scratch,
-										epoch)
-			print('Epoch: {:.0f}, LR_B: {:.6f}, LR_S: {:.6f}'.format(epoch+1,
-																	 lr_b, lr_s))
+			lr = adjust_learning_rate(self.config, self.optimizer_dpt, epoch)
+			print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch+1, lr))
 			print('Training...')
 			train_loss = 0.0
 			overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
@@ -144,11 +141,11 @@ class Trainer(object):
 												   non_blocking=True)
 				batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-				self.optimizer_dpt_backbone.zero_grad()
-				self.optimizer_dpt_scratch.zero_grad()
+				self.optimizer_dpt.zero_grad()
 
 				_, output_seg = self.model(batch['rgb'], batch['lidar'],
 										   modality)
+
 
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
@@ -171,8 +168,7 @@ class Trainer(object):
 
 				train_loss += loss.item()
 				loss.backward()
-				self.optimizer_dpt_scratch.step()
-				self.optimizer_dpt_backbone.step()
+				self.optimizer_dpt.step()
 				progress_bar.set_description(f'DPT train loss:{loss:.4f}')
 
 			# The IoU of one epoch
@@ -207,14 +203,12 @@ class Trainer(object):
 			writer.close()
 
 			early_stopping(valid_epoch_IoU[0], epoch, self.model,
-						   self.optimizer_dpt_backbone,
-						   self.optimizer_dpt_scratch)
+						   self.optimizer_dpt)
 			if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and
 					epoch > 0):
 				print('Saving model for every 10 epochs...')
 				save_model_dict(self.config, epoch, self.model,
-								self.optimizer_dpt_backbone,
-								self.optimizer_dpt_scratch, True)
+								self.optimizer_dpt, True)
 				print('Saving Model Complete')
 			if early_stopping.early_stop_trigger is True:
 				break

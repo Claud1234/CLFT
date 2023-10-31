@@ -81,11 +81,43 @@ class Trainer(object):
 		self.nclasses = len(config['Dataset']['classes'])
 		weight_loss = torch.Tensor(self.nclasses).fill_(0)
 		# define weight of different classes, 0-background, 1-car, 2-people.
-		#weight_loss[3] = 0
+		# weight_loss[3] = 0
 		weight_loss[0] = 1
 		weight_loss[1] = 4
 		weight_loss[2] = 10
 		self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
+
+		if self.config['General']['resume_training'] is True:
+			print('Resume training...')
+			model_path = self.config['General']['resume_training_model_path']
+			checkpoint = torch.load(model_path)
+
+			if self.config['General']['reset_lr'] is True:
+				print('Reset the epoch to 0')
+				finished_epochs = 0
+			else:
+				finished_epochs = checkpoint['epoch']
+				print(
+					f"Finished epochs in previous training: {finished_epochs}")
+
+			if self.config['General']['epochs'] <= finished_epochs:
+				print(
+					'Present epochs amount is smaller than finished epochs!!!')
+				print(
+					f"Please setting the epochs bigger than {finished_epochs}")
+				sys.exit()
+			else:
+				print('Loading trained model weights...')
+				self.model.load_state_dict(checkpoint['model_state_dict'])
+				print('Loading trained optimizer...')
+				self.optimizer_dpt_scratch.load_state_dict(checkpoint[
+					'optimizer_scratch_state_dict'])
+				self.optimizer_dpt_backbone.load_state_dict(checkpoint[
+					'optimizer_backbone_state_dict'])
+
+		elif args.resume_training == 'no':
+			print('Training from the beginning')
+			finished_epochs = 0
 
 	def train_dpt(self, train_dataloader, valid_dataloader, modal):
 		"""
@@ -120,22 +152,22 @@ class Trainer(object):
 
 				# 1xHxW -> HxW
 				output_seg = output_seg.squeeze(1)
-				#print(output_seg)
-				#print(output_seg.size())
+				# print(output_seg)
+				# print(output_seg.size())
 				anno = batch['anno']
 				# print(1 in anno)
 				batch_overlap, batch_pred, batch_label, batch_union = \
 					find_overlap(self.nclasses, output_seg, anno)
-				#print(batch_label)
+				# print(batch_label)
 				overlap_cum += batch_overlap
 				pred_cum += batch_pred
 				label_cum += batch_label
 				union_cum += batch_union
 
 				loss = self.criterion(output_seg, batch['anno'])
-				#w_rgb = 1.1
-				#w_lid = 0.9
-				#loss = w_rgb*loss_rgb + w_lid*loss_lidar + loss_fusion
+				# w_rgb = 1.1
+				# w_lid = 0.9
+				# loss = w_rgb*loss_rgb + w_lid*loss_lidar + loss_fusion
 
 				train_loss += loss.item()
 				loss.backward()

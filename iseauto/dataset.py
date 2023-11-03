@@ -28,9 +28,12 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
     list_files = [os.path.basename(im) for im in paths_rgb]
     np.random.seed(config['General']['seed'])
     np.random.shuffle(list_files)
+    print(list_files)
+    # print(list_files)
     if split == 'train':
         selected_files = list_files[:int(len(list_files)*\
                                 config['Dataset']['splits']['split_train'])]
+
     elif split == 'val':
         selected_files = list_files[
             int(len(list_files)*config['Dataset']['splits']['split_train']):
@@ -40,8 +43,8 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
         selected_files = list_files[
             int(len(list_files)*config['Dataset']['splits']['split_train']) +
             int(len(list_files)*config['Dataset']['splits']['split_val']):]
+    print(selected_files)
 
-    #print(selected_files)
 
     paths_rgb = [os.path.join(config['Dataset']['paths']['path_dataset'],
                               data_category,

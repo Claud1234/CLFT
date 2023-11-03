@@ -32,6 +32,7 @@ args = parser.parse_args()
 np.random.seed(config['General']['seed'])
 trainer = Trainer(config, args)
 
+
 list_datasets = config['Dataset']['paths']['list_datasets']
 modality = config['General']['sensor_modality']
 
@@ -57,5 +58,6 @@ valid_dataloader = DataLoader(valid_data,
 #print('**************************************')
 
 trainer.train_dpt(train_dataloader, valid_dataloader, modal=modality)
+
 
 

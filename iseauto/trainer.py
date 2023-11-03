@@ -202,7 +202,7 @@ class Trainer(object):
 								'valid': valid_epoch_IoU[1]}, epoch)
 			writer.close()
 
-			early_stopping(valid_epoch_IoU[0], epoch, self.model,
+			early_stopping(round(valid_epoch_IoU[0], 4), epoch, self.model,
 						   self.optimizer_dpt)
 			if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and
 					epoch > 0):

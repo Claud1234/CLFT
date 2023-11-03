@@ -41,7 +41,6 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
         selected_files = list_files[
             int(len(list_files)*config['Dataset']['splits']['split_train']) +
             int(len(list_files)*config['Dataset']['splits']['split_val']):]
-    print(selected_files)
 
     paths_rgb = [os.path.join(config['Dataset']['paths']['path_dataset'],
                               data_category,

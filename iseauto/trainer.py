@@ -131,7 +131,7 @@ class Trainer(object):
         self.model.train()
         for epoch in range(self.finished_epochs, epochs):
             lr = adjust_learning_rate(self.config, self.optimizer_dpt, epoch)
-            print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch + 1, lr))
+            print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
             print('Training...')
             train_loss = 0.0
             overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0

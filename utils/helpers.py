@@ -101,35 +101,35 @@ def save_model_dict(config, epoch, model, optimizer, save_check=False):
     creat_dir(config)
     if save_check is False:
         if sensor_modality == 'rgb':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_rgb']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_lidar']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_fusion']+f"checkpoint_{epoch}.pth")
     else:
         if sensor_modality == 'rgb':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                     config['Log'][
                 'logdir_rgb']+'progress_save/'+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        config['Log'][
                 'logdir_lidar'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
-            torch.save({'epoch': epoch+1,
+            torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        config['Log'][
@@ -139,41 +139,42 @@ def save_model_dict(config, epoch, model, optimizer, save_check=False):
 def adjust_learning_rate(config, optimizer, epoch):
     """Decay the learning rate based on schedule"""
     epoch_max = config['General']['epochs']
-    lr = config['General']['dpt_lr'] * (1-epoch/epoch_max)**0.9
-
+    momentum = config['General']['lr_momentum']
+    # lr = config['General']['dpt_lr'] * (1-epoch/epoch_max)**0.9
+    lr = config['General']['dpt_lr'] * (momentum ** epoch)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
     return lr
 
 
-def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
-    mid_epoch = epoch_max/2
-    if epoch <= mid_epoch:
-        if model == 'rgb':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-                'lr_rgb_semi']
-        elif model == 'lidar':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-                'lr_lidar_semi']
-        elif model == 'fusion':
-            lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-                'lr_fusion_semi']
-    else:
-        if model == 'rgb':
-            lr = config['General']['fcn'][
-                'lr_rgb_semi'] * (1 - epoch/epoch_max)**0.9
-        elif model == 'lidar':
-            lr = config['General']['fcn'][
-                'lr_lidar_semi'] * (1 - epoch/epoch_max)**0.9
-        elif model == 'fusion':
-            lr = config['General']['fcn'][
-                'lr_fusion_semi'] * (1 - epoch/epoch_max)**0.9
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-    return lr
+# def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
+#     mid_epoch = epoch_max/2
+#     if epoch <= mid_epoch:
+#         if model == 'rgb':
+#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+#                 'lr_rgb_semi']
+#         elif model == 'lidar':
+#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+#                 'lr_lidar_semi']
+#         elif model == 'fusion':
+#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
+#                 'lr_fusion_semi']
+#     else:
+#         if model == 'rgb':
+#             lr = config['General']['fcn'][
+#                 'lr_rgb_semi'] * (1 - epoch/epoch_max)**0.9
+#         elif model == 'lidar':
+#             lr = config['General']['fcn'][
+#                 'lr_lidar_semi'] * (1 - epoch/epoch_max)**0.9
+#         elif model == 'fusion':
+#             lr = config['General']['fcn'][
+#                 'lr_fusion_semi'] * (1 - epoch/epoch_max)**0.9
+#
+#     for param_group in optimizer.param_groups:
+#         param_group['lr'] = lr
+#
+#     return lr
 
 
 class EarlyStopping(object):

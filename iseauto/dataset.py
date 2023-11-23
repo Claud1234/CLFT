@@ -31,7 +31,7 @@ def get_splitted_dataset(config, split, data_category, paths_rgb):
     if split == 'train':
         selected_files = list_files[:int(len(list_files)*\
                                 config['Dataset']['splits']['split_train'])]
-
+#        print(selected_files)
     elif split == 'val':
         selected_files = list_files[
             int(len(list_files)*config['Dataset']['splits']['split_train']):

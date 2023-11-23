@@ -1,6 +1,6 @@
 {
     "General":{
-        "device":"cuda",
+        "device":"cuda:0",
         "sensor_modality": "cross_fusion",
         "fcn": {
             "lr_rgb":0.00006,
@@ -10,40 +10,37 @@
             "lr_lidar_semi":0.000003,
             "lr_fusion_semi":0.00003
         },
-        "dpt": {
-            "lr_backbone":6e-5,
-            "lr_scratch":6e-5
-        },
+        "dpt_lr":8e-5,
         "type":"segmentation",
         "model_timm":"vit_base_resnet50_384",
         "emb_dim":768,
         "hooks":[2, 5, 8, 11],
         "read":"projection",
         "resample_dim":256,
-
         "loss_depth":"ssi",
         "loss_segmentation":"ce",
-        "momentum":0.9,
-        "epochs":100,
-        "batch_size":16,
+        "lr_momentum":0.99,
+        "epochs":400,
+        "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
         "patch_size":16,
-        "resume_training": true,
-        "resume_training_model_path": "",
+        "resume_training":true,
+        "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
+	"reset_lr":false,
         "early_stop_patience": 50,
-        "save_epoch": 10,
-        "model_path":"/media/nfs_client/training_logs/fusion/checkpoint_69.pth"
+        "save_epoch": 20,
+        "model_path":"/gpfs/mariana/smbhome/junygu/logs/17-11-2013/checkpoint_280.pth"
     },
     "Log": {
-        "logdir_rgb": "/media/nfs_client/training_logs/rgb/",
-        "logdir_lidar": "/media/nfs_client/training_logs/lidar/",
-        "logdir_fusion": "/media/nfs_client/training_logs/fusion/"
+        "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
+        "logdir_lidar": "/gpfs/mariana/smbhome/junygu/logs/lidar/",
+        "logdir_fusion": "/gpfs/mariana/smbhome/junygu/logs/17-11-2013/"
     },
     "Dataset":{
-        "name": "iseauto",
+        "name": "waymo",
         "paths":{
-            "path_dataset":"/home/autolab/claude/dataset/claude_iseauto/labeled",
+            "path_dataset":"/gpfs/mariana/home/junygu/claude/dataset/waymo/labeled",
             "list_datasets":["day_fair", "day_rain", "night_fair", "night_rain"],
             "path_rgb":"rgb",
             "path_anno":"annotation_gray",
@@ -56,19 +53,16 @@
         },
         "transforms":{
             "resize":384,
-            "augment_sequence_shuffle": false,
+            "random_rotate_range":20,
+            "p_flip":0.5,
+            "p_crop":0.3,
+            "p_rot":0.4,
             "image_mean":[0.485, 0.456, 0.406],
             "image_std":[0.229, 0.224, 0.225],
             "lidar_mean_waymo":[-0.17263354, 0.85321806, 24.5527253],
             "lidar_std_waymo":[7.34546552, 1.17227659, 15.83745082],
             "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
-            "lidar_std_iseauto":[7.79,  2.156, 7.60],
-            "random_crop_size":128,
-            "random_rotate_range":20,
-            "color_jitter":[0.4, 0.4, 0.4, 0.1],
-            "p_flip":0.5,
-            "p_crop":0.3,
-            "p_rot":0.2
+            "lidar_std_iseauto":[7.79,  2.156, 7.60]
         },
         "classes":{
             "0": {

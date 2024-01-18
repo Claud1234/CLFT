@@ -15,12 +15,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath(''))
-import configs
 from utils.lidar_process import open_lidar
 
 # For Waymo example
 points_set, camera_coord = open_lidar(
-     '/home/claude/Data/mauro_waymo/labeled/day/not_rain/lidar/segment-10327752107000040525_1120_000_1140_000_with_camera_labels_0000000104.pkl',
+     '../test_images/test_1_lidar.pkl',
      4, 4, lidar_mean=[0, 0, 0], lidar_std=[1, 1, 1])
 
 # points_set, camera_coord = open_lidar(
@@ -28,7 +27,7 @@ points_set, camera_coord = open_lidar(
 #    1, 1, lidar_mean=[0, 0, 0], lidar_std=[1, 1, 1])
 
 # For Waymo example
-rgb = cv2.imread('/home/claude/Data/mauro_waymo/labeled/day/not_rain/camera/segment-10327752107000040525_1120_000_1140_000_with_camera_labels_0000000104.png')
+rgb = cv2.imread('../test_images/test_1_img.png')
 
 # For iseAuto example
 # rgb = cv2.imread('/home/claude/Data/claude_iseauto/labeled/day_fair/rgb/sq11_000458.png')
@@ -48,7 +47,7 @@ for i in range(camera_coord.shape[0]):
 #                     int(np.round(camera_coord[i, 1]))),
 #               2, color=tuple(color), thickness=5)
 
-cv2.imwrite('/home/claude/result.png', rgb)
+cv2.imwrite('./result.png', rgb)
 
 while True:
     cv2.imshow("result.jpg", rgb)

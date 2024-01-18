@@ -1,201 +1,179 @@
 #!/usr/bin/env python3
 import cv2
+import sys
 import torch
 import argparse
 import numpy as np
 from PIL import Image
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
-import configs
+import json
+from dpt.dpt import DPT
+from fcn.fusion_net import FusionNet
+from utils.helpers import waymo_anno_class_relabel
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
-from fcn.fusion_net import FusionNet
+from iseauto.dataset import lidar_dilation
+
 from utils.helpers import draw_test_segmentation_map, image_overlay
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
 
 
-def prepare_annotation(annotation):
-    '''
-    Reassign the indices of the objects in annotation(PointCloud);
-    :parameter annotation: 0->ignore 1->vehicle, 2->pedestrian, 3->sign,
-                            4->cyclist, 5->background
-    :return annotation: 0->background+sign, 1->vehicle
-                            2->pedestrian+cyclist, 3->ignore
-    '''
-    annotation = np.array(annotation)
+class OpenInput(object):
+    def __init__(self, config):
+        self.config = config
 
-    mask_ignore = annotation == 0
-    mask_sign = annotation == 3
-    mask_cyclist = annotation == 4
-    mask_background = annotation == 5
+    def open_rgb(self):
+        rgb_normalize = transforms.Compose(
+            [transforms.Resize((384, 384),
+                    interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=self.config['Dataset']['transforms']['image_mean'],
+                    std=self.config['Dataset']['transforms']['image_mean'])])
 
-    annotation[mask_sign] = 0
-    annotation[mask_background] = 0
-    annotation[mask_cyclist] = 2
-    annotation[mask_ignore] = 3
+        rgb = Image.open('./test_images/test_1_img.png').convert('RGB')
+        # image = Image.open(
+        #       '/home/claude/Data/claude_iseauto/labeled/night_fair/rgb/sq14_000061.png').\
+        #         resize((480, 320)).convert('RGB')
+        w_orig, h_orig = rgb.size  # original image's w and h
+        delta = int(h_orig/2)
+        top_crop_rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)
+        top_rgb_norm = rgb_normalize(top_crop_rgb)
+        return top_rgb_norm
 
-    return TF.to_pil_image(annotation)
+    def open_anno(self):
+        anno_resize = transforms.Resize((384, 384),
+                        interpolation=transforms.InterpolationMode.NEAREST)
+        anno = Image.open('./test_images/test_1_img.png')
+        anno = waymo_anno_class_relabel(anno)
+        # annotation = Image.open(
+        #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
+        #          resize((480, 320), Image.BICUBIC).convert('F')
+        w_orig, h_orig = anno.size  # PIL tuple. (w, h)
+        delta = int(h_orig/2)
+        top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
+        anno_resize = anno_resize(top_crop_anno).squeeze(0)
+        return anno_resize
 
+    def open_lidar(self):
+        points_set, camera_coord = open_lidar(
+            './test_images/test_1_lidar.pkl',
+            w_ratio=4,
+            h_ratio=4,
+            lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
+            lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])
 
-parser = argparse.ArgumentParser(description='test script')
-parser.add_argument('-m', '--mode', type=str, required=True,
-                    help='Output mode (lidar, rgb or fusion)', default=None)
-args = parser.parse_args()
+        top_crop_points_set, top_crop_camera_coord, _ = crop_pointcloud(
+            points_set, camera_coord, 160, 0, 160, 480)
+        X, Y, Z = get_unresized_lid_img_val(160, 480,
+                                            top_crop_points_set,
+                                            top_crop_camera_coord)
+        X, Y, Z = lidar_dilation(X, Y, Z)
+        X = transforms.Resize((384, 384))(X)
+        Y = transforms.Resize((384, 384))(Y)
+        Z = transforms.Resize((384, 384))(Z)
 
+        X = TF.to_tensor(np.array(X))
+        Y = TF.to_tensor(np.array(Y))
+        Z = TF.to_tensor(np.array(Z))
 
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])])
-
-# model loading
-model = FusionNet()
-# checkpoint loading
-checkpoint = torch.load(
-    '/media/storage/data/logs/phase_2_fusion_LR_00006/checkpoint_118.pth')
-#    '/media/storage/data/logs/phase_3_SSL_fusion_small_LR/progress_save/checkpoint_319.pth')
-epoch = checkpoint['epoch']
-print('Finished Epochs:', epoch)
-# trained weights loading
-model.load_state_dict(checkpoint['model_state_dict'])
-# optimizer loading
-# optimizer.load_state_dict(checkpoint['optimizer'])
-# load the model to CPU
-model.eval().to('cuda')
-
-
-# Image operations
-image = Image.open(configs.TEST_IMAGE).convert('RGB')
-# image = Image.open(
-#       '/home/claude/Data/claude_iseauto/labeled/night_fair/rgb/sq14_000061.png').\
-#         resize((480, 320)).convert('RGB')
-w_orig, h_orig = image.size  # original image's w and h
-# delta = int(h_orig/2)
-delta = 0
-image = TF.crop(image, delta, 0, h_orig-delta, w_orig)
-w_top_crop, h_top_crop = image.size
-orig_image = np.array(image.copy())
-image = np.array(image)
-img_cpu = image.copy()
-image = transform(image).to('cuda')
-image = image.unsqueeze(0)  # add a batch dimension
+        lid_images = torch.cat((X, Y, Z), 0)
+        return lid_images
 
 
-# Anno operation
-annotation = Image.open(configs.TEST_ANNO).convert('F')
-annotation = prepare_annotation(annotation)
-# annotation = Image.open(
-#       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
-#          resize((480, 320), Image.BICUBIC).convert('F')
-annotation = TF.to_pil_image(np.array(annotation))
-annotation = TF.to_tensor(np.array(annotation)).type(torch.LongTensor)  # add a batch dimension
-annotation = TF.crop(annotation, delta, 0, h_orig-delta, w_orig)
-annotation = annotation.to('cuda')
+# # print(outputs.shape)
+# overlap, pred, label, union = find_overlap(outputs, annotation)
+# print('overlap', overlap)
+# print('pred', pred)
+# print('anno', label)
+# IoU = 1.0 * overlap / (np.spacing(1) + union)
+# precision = 1.0 * overlap / (np.spacing(1) + pred)
+# recall = 1.0 * overlap / (np.spacing(1) + label)
+# print('IoU:', IoU)
+# print('precision:', precision)
+# print('recall:', recall)
+# while True:
+#     cv2.imshow("result.jpg", result)
+#     cv2.waitKey(30)
+#     if cv2.getWindowProperty("result.jpg", cv2.WND_PROP_VISIBLE) <= 0:
+#         break
+#
+# cv2.destroyWindow("result.jpg")
+
+def run(modality, backbone, config):
+    device = torch.device(config['General']['device']
+                          if torch.cuda.is_available() else "cpu")
+    open_input = OpenInput(config)
+    rgb = open_input.open_rgb().to(device, non_blocking=True)
+    rgb = rgb.unsqueeze(0)  # add a batch dimension
+    lidar = open_input.open_lidar().to(device, non_blocking=True)
+    lidar = lidar.unsqueeze(0)
+
+    if backbone == 'fcn':
+        model = FusionNet()
+        print(f'Using backbone {args.backbone}')
+        checkpoint = torch.load(
+            '/media/storage/data/logs/phase_2_fusion_LR_00006/checkpoint_118.pth')
+        #    '/media/storage/data/logs/phase_3_SSL_fusion_small_LR/progress_save/checkpoint_319.pth')
+        epoch = checkpoint['epoch']
+        print('Finished Epochs:', epoch)
+        model.load_state_dict(checkpoint['model_state_dict'])
+
+        model.to(device)
+        model.eval()
+        output_seg = model(rgb, lidar, 'all')
+        output_seg = output_seg[modality]
+
+    elif backbone == 'dpt':
+        resize = config['Dataset']['transforms']['resize']
+        model = DPT(
+            RGB_tensor_size=(3, resize, resize),
+            XYZ_tensor_size=(3, resize, resize),
+            emb_dim=config['General']['emb_dim'],
+            resample_dim=config['General']['resample_dim'],
+            read=config['General']['read'],
+            nclasses=len(config['Dataset']['classes']),
+            hooks=config['General']['hooks'],
+            model_timm=config['General']['model_timm'],
+            type=config['General']['type'],
+            patch_size=config['General']['patch_size'], )
+        print(f'Using backbone {args.backbone}')
+
+        model_path = config['General']['model_path']
+        model.load_state_dict(torch.load(model_path, map_location=device)[
+                                  'model_state_dict'])
+
+        model.to(device)
+        model.eval()
+        _, output_seg = model(rgb, lidar, modality)
+
+        segmented_image = draw_test_segmentation_map(output_seg)
+
+        result = image_overlay(rgb, segmented_image)
+        print(result)
+        cv2.imwrite('./dpt_seg_visual.png', result)
+
+    else:
+        sys.exit("A backbone must be specified! (dpt or fcn)")
 
 
-# Lidar Image
-# with open('/home/claude/Data/bin/sq20_001876.bin', 'rb') as _fd:
-#     _data = _fd.read()
-#     _lidar = np.frombuffer(_data, np.float32)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='visual run script')
+    parser.add_argument('-m', '--mode', type=str, required=True,
+                        choices=['rgb', 'lidar', 'cross_fusion'],
+                        help='Output mode (lidar, rgb or cross_fusion)')
+    parser.add_argument('-bb', '--backbone', required=True,
+                        choices=['fcn', 'dpt'],
+                        help='Use the backbone of training, dpt or fcn')
+    args = parser.parse_args()
 
-# _xyzi = _lidar.reshape(-1, 4)
-# calib = lp.read_calib_file(
-#     '/home/claude/Dev/TalTech_DriverlessProject/catkin_ws/src/ttu_autolab/config/calib.txt')
-# inds, _pts_2d = lp.render_lidar_on_image(_xyzi[:, :-1], 2824, 4240, calib)
-# # print(inds)
-# # print(img_cpu.shape[:2])
-# # Xl = np.zeros(img_cpu.shape[:2], np.float32)
-# # Yl = np.zeros(img_cpu.shape[:2], np.float32)
-# # Zl = np.zeros(img_cpu.shape[:2], np.float32)
-# X = np.zeros((320, 480), np.float32)
-# Y = np.zeros((320, 480), np.float32)
-# Z = np.zeros((320, 480), np.float32)
+    with open('config.json', 'r') as f:
+        configs = json.load(f)
 
-
-# xs, ys = _pts_2d[:, inds].astype(np.int16)
-# # print(xs, ys)
-# xs = (xs/8.84).astype(int)
-# ys = (ys/8.825).astype(int)
-
-# mean_lidar = configs.ISE_LIDAR_MEAN
-# std_lidar = configs.ISE_LIDAR_STD
-# x_lid = (_xyzi[:, 1] - mean_lidar[0])/std_lidar[0]
-# y_lid = (_xyzi[:, 2] - mean_lidar[1])/std_lidar[1]
-# z_lid = (_xyzi[:, 0] - mean_lidar[2])/std_lidar[2]
-
-# X[ys, xs] = x_lid[inds]
-# Y[ys, xs] = y_lid[inds]
-# Z[ys, xs] = z_lid[inds]
-
-
-# Lidar operations
-points_set, camera_coord = open_lidar(
-    configs.TEST_LIDAR,
-    4, 4, configs.LIDAR_MEAN, configs.LIDAR_STD)
-
-# points_set, camera_coord = open_lidar(
-#      '/home/claude/Data/claude_iseauto/labeled/night_fair/pkl/sq14_000061.pkl',
-#      8.84, 8.825, configs.ISE_LIDAR_MEAN, configs.ISE_LIDAR_STD)
-points_set, camera_coord, _ = crop_pointcloud(points_set, camera_coord,
-                                              delta, 0, h_orig-delta, w_orig)
-X, Y, Z = get_unresized_lid_img_val(h_top_crop, w_top_crop,
-                                    points_set, camera_coord)
-X = TF.to_tensor(np.array(X))
-Y = TF.to_tensor(np.array(Y))
-Z = TF.to_tensor(np.array(Z))
-lidar_image = torch.cat((X, Y, Z), 0)
-lidar_image = lidar_image.to('cuda')
-lidar_image = lidar_image.unsqueeze(0)  # add a batch dimension
-
-# a = lidar_image.detach().cpu()
-# a = a.permute(1,2,0)
-# a = np.array(a)
-# cv2.imwrite('/home/claude/xyz_0.png', a*255)
-
-# forward pass through the model
-outputs = model(image, lidar_image, 'all')
-# output_array = np.array(list(outputs.items()))
-# np.savez_compressed('rgb_loss_backward', output_array)
-outputs = outputs[args.mode]
-print(outputs.size())
-# annotation_teacher = F.softmax(outputs, 1)
-# print(annotation_teacher.size())
-# _, annotation_teacher = torch.max(annotation_teacher, 1)
-# print(annotation_teacher.detach())
-# print(1 in annotation_teacher)
-# print(2 in annotation_teacher)
-# print(3 in annotation_teacher)
-
-# print(outputs.shape)
-overlap, pred, label, union = find_overlap(outputs, annotation)
-print('overlap', overlap)
-print('pred', pred)
-print('anno', label)
-IoU = 1.0 * overlap / (np.spacing(1) + union)
-precision = 1.0 * overlap / (np.spacing(1) + pred)
-recall = 1.0 * overlap / (np.spacing(1) + label)
-print('IoU:', IoU)
-print('precision:', precision)
-print('recall:', recall)
-
-
-# get the segmentation map
-segmented_image = draw_test_segmentation_map(outputs)
-print(segmented_image.shape)
-# image overlay
-result = image_overlay(orig_image, segmented_image)
-
-# visualize result
-
-# cv2.imwrite('/home/claude/2.png', np.array(outputs.detach().cpu()))
-while True:
-    cv2.imshow("result.jpg", result)
-    cv2.waitKey(30)
-    if cv2.getWindowProperty("result.jpg", cv2.WND_PROP_VISIBLE) <= 0:
-        break
-
-cv2.destroyWindow("result.jpg")
+    run(args.mode, args.backbone, configs)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 import sys
+import time
 import torch
 import argparse
 import numpy as np
@@ -151,8 +152,10 @@ def run(modality, backbone, config):
 
         model.to(device)
         model.eval()
+        start = time.time()
         _, output_seg = model(rgb, lidar, modality)
-
+        exe_time = time.time() - start
+        print(f'Executed in {exe_time*1000} miliseconds')
         segmented_image = draw_test_segmentation_map(output_seg)
 
         # resize = transforms.Compose([transforms.ToPILImage(),

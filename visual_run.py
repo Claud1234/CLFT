@@ -155,9 +155,14 @@ def run(modality, backbone, config):
 
         segmented_image = draw_test_segmentation_map(output_seg)
 
-        result = image_overlay(rgb, segmented_image)
-        print(result)
-        cv2.imwrite('./dpt_seg_visual.png', result)
+        # resize = transforms.Compose([transforms.ToPILImage(),
+        #             transforms.Resize((160, 480),
+        #             interpolation=transforms.InterpolationMode.BILINEAR)])
+        # seg_resize = resize(segmented_image)
+
+        seg_resize = cv2.resize(segmented_image, (480, 160))
+        #result = image_overlay(rgb, segmented_image)
+        cv2.imwrite('./dpt_seg_visual.png',seg_resize)
 
     else:
         sys.exit("A backbone must be specified! (dpt or fcn)")

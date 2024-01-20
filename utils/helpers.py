@@ -7,9 +7,9 @@ import numpy as np
 
 
 label_colors_list = [
-        (255, 0, 0),
-        (0, 255, 0),
-        (0, 0, 255),
+        (0, 0, 0),        # B
+        (0, 255, 0),            # G
+        (0, 0, 255),            # R
         (100, 100, 100)]
 
 # all the classes that are present in the dataset
@@ -72,16 +72,16 @@ def draw_test_segmentation_map(outputs):
     # labels = outputs.squeeze().detach().cpu().numpy()
     red_map = np.zeros_like(labels).astype(np.uint8)
     green_map = np.zeros_like(labels).astype(np.uint8)
-    blue_map = np.zeros_like(labels).astype(np.uint8)
+    black_map = np.zeros_like(labels).astype(np.uint8)
 
     for label_num in range(0, len(label_colors_list)):
         if label_num in class_values:
             idx = labels == label_num
             red_map[idx] = np.array(label_colors_list)[label_num, 0]
             green_map[idx] = np.array(label_colors_list)[label_num, 1]
-            blue_map[idx] = np.array(label_colors_list)[label_num, 2]
+            black_map[idx] = np.array(label_colors_list)[label_num, 2]
 
-    segmented_image = np.stack([red_map, green_map, blue_map], axis=2)
+    segmented_image = np.stack([red_map, green_map, black_map], axis=2)
     return segmented_image
 
 

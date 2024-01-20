@@ -1,6 +1,6 @@
 {
     "General":{
-        "device":"cuda:0",
+        "device":"cpu",
         "sensor_modality": "cross_fusion",
         "fcn": {
             "lr_rgb":0.00006,
@@ -30,7 +30,7 @@
 	"reset_lr":false,
         "early_stop_patience": 50,
         "save_epoch": 20,
-        "model_path":"/gpfs/mariana/smbhome/junygu/logs/17-11-2013/checkpoint_280.pth"
+        "model_path":"./checkpoint_374.pth"
     },
     "Log": {
         "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",

@@ -120,7 +120,7 @@ def run(modality, backbone, config):
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
         checkpoint = torch.load(
-            './checkpoint_289_fusion.pth', map_location=device))
+            './checkpoint_289_fusion.pth', map_location=device)
 
         model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -134,7 +134,7 @@ def run(modality, backbone, config):
 
         #GPU-WARM-UP
         for _ in range(300):
-            _,_ = model(rgb, lidar, modality)
+            _ = model(rgb, lidar, 'all')
         print('GPU warm up is done with 300 iterations')
 
         with torch.no_grad():
@@ -152,8 +152,7 @@ def run(modality, backbone, config):
         print(f'Mean execute time of 1000 iterations is {mean_syn} milliseconds')
 
 
-        output_seg = model(rgb, lidar, 'all')
-        output_seg = output_seg[modality]
+        output_seg = model(rgb, lidar, modality)
 
     elif backbone == 'dpt':
         resize = config['Dataset']['transforms']['resize']

@@ -120,14 +120,38 @@ def run(modality, backbone, config):
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
         checkpoint = torch.load(
-            '/media/storage/data/logs/phase_2_fusion_LR_00006/checkpoint_118.pth')
-        #    '/media/storage/data/logs/phase_3_SSL_fusion_small_LR/progress_save/checkpoint_319.pth')
-        epoch = checkpoint['epoch']
-        print('Finished Epochs:', epoch)
+            './checkpoint_289_fusion.pth', map_location=device))
+
         model.load_state_dict(checkpoint['model_state_dict'])
 
         model.to(device)
         model.eval()
+
+        # init time logger
+        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+        repetitions = 1000
+        timings=np.zeros((repetitions,1))
+
+        #GPU-WARM-UP
+        for _ in range(300):
+            _,_ = model(rgb, lidar, modality)
+        print('GPU warm up is done with 300 iterations')
+
+        with torch.no_grad():
+            for rep in range(repetitions):
+                starter.record()
+                output_seg = model(rgb, lidar, 'all')
+                ender.record()
+                # wait for GPU sync
+                torch.cuda.synchronize()
+                curr_time = starter.elapsed_time(ender)
+                timings[rep] = curr_time
+
+        mean_syn = np.sum(timings) / repetitions
+        std_syn = np.std(timings)
+        print(f'Mean execute time of 1000 iterations is {mean_syn} milliseconds')
+
+
         output_seg = model(rgb, lidar, 'all')
         output_seg = output_seg[modality]
 
@@ -152,10 +176,32 @@ def run(modality, backbone, config):
 
         model.to(device)
         model.eval()
-        start = time.time()
-        _, output_seg = model(rgb, lidar, modality)
-        exe_time = time.time() - start
-        print(f'Executed in {exe_time*1000} miliseconds')
+
+        # init time logger
+        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+        repetitions = 1000
+        timings=np.zeros((repetitions,1))
+
+        #GPU-WARM-UP
+        for _ in range(300):
+            _,_ = model(rgb, lidar, modality)
+        print('GPU warm up is done with 300 iterations')
+
+        with torch.no_grad():
+            for rep in range(repetitions):
+                starter.record()
+                _, output_seg = model(rgb, lidar, modality)
+                ender.record()
+                # wait for GPU sync
+                torch.cuda.synchronize()
+                curr_time = starter.elapsed_time(ender)
+                timings[rep] = curr_time
+
+        mean_syn = np.sum(timings) / repetitions
+        std_syn = np.std(timings)
+        print(f'Mean execute time of 1000 iterations is {mean_syn} milliseconds')
+#        exe_time = time.time() - start
+#        print(f'Executed in {exe_time*1000} miliseconds')
         segmented_image = draw_test_segmentation_map(output_seg)
 
         # resize = transforms.Compose([transforms.ToPILImage(),
@@ -165,7 +211,7 @@ def run(modality, backbone, config):
 
         seg_resize = cv2.resize(segmented_image, (480, 160))
         #result = image_overlay(rgb, segmented_image)
-        cv2.imwrite('./dpt_seg_visual.png',seg_resize)
+        #cv2.imwrite('./dpt_seg_visual.png',seg_resize)
 
     else:
         sys.exit("A backbone must be specified! (dpt or fcn)")

@@ -61,7 +61,7 @@ class FusionNet(nn.Module):
             out = {}
             out['rgb'] = out_rgb
             out['lidar'] = out_lidar
-            out['fusion'] = out_fusion
+            out['cross_fusion'] = out_fusion
 
         elif modal == 'rgb':
             features_rgb = self.backbone_rgb(rgb)
@@ -83,7 +83,7 @@ class FusionNet(nn.Module):
             out = {}
             out['lidar'] = out_lidar
 
-        elif modal == 'fusion':
+        elif modal == 'cross_fusion':
             features_rgb = self.backbone_rgb(rgb)
             features_lidar = self.backbone_lidar(lidar)
             features_fusion = torch.cat((features_rgb, features_lidar), dim=1)
@@ -94,7 +94,7 @@ class FusionNet(nn.Module):
                                        mode='bilinear', align_corners=False)
 
             out = {}
-            out['fusion'] = out_fusion
+            out['cross_fusion'] = out_fusion
 
         elif modal == 'ind':
             features_rgb = self.backbone_rgb(rgb)

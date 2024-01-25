@@ -129,13 +129,13 @@ def run(modality, backbone, config):
 
         # init time logger
         starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-        repetitions = 1000
+        repetitions = 2000
         timings=np.zeros((repetitions,1))
 
         #GPU-WARM-UP
-        for _ in range(300):
+        for _ in range(2000):
             _ = model(rgb, lidar, 'all')
-        print('GPU warm up is done with 300 iterations')
+        print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
             for rep in range(repetitions):
@@ -149,7 +149,7 @@ def run(modality, backbone, config):
 
         mean_syn = np.sum(timings) / repetitions
         std_syn = np.std(timings)
-        print(f'Mean execute time of 1000 iterations is {mean_syn} milliseconds')
+        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
 
 
         output_seg = model(rgb, lidar, modality)
@@ -178,13 +178,13 @@ def run(modality, backbone, config):
 
         # init time logger
         starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-        repetitions = 1000
+        repetitions = 2000
         timings=np.zeros((repetitions,1))
 
         #GPU-WARM-UP
-        for _ in range(300):
+        for _ in range(2000):
             _,_ = model(rgb, lidar, modality)
-        print('GPU warm up is done with 300 iterations')
+        print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
             for rep in range(repetitions):
@@ -198,7 +198,7 @@ def run(modality, backbone, config):
 
         mean_syn = np.sum(timings) / repetitions
         std_syn = np.std(timings)
-        print(f'Mean execute time of 1000 iterations is {mean_syn} milliseconds')
+        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
 #        exe_time = time.time() - start
 #        print(f'Executed in {exe_time*1000} miliseconds')
         segmented_image = draw_test_segmentation_map(output_seg)

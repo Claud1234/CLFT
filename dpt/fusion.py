@@ -38,44 +38,22 @@ class Fusion(nn.Module):
         #self.resample = nn.ConvTranspose2d(resample_dim, resample_dim, kernel_size=2, stride=2, padding=0, bias=True, dilation=1, groups=1)
 
     def forward(self, rgb, lidar, previous_stage=None, modal = 'rgb'):
-        #if previous_stage == None:
-        #        previous_stage = torch.zeros_like(rgb)
+        if previous_stage == None:
+                previous_stage = torch.zeros_like(rgb)
 
         if modal == 'rgb':
-            if previous_stage == None:
-                 previous_stage = torch.zeros_like(rgb)
-
             output_stage1_rgb = self.res_conv_rgb(rgb)
-#            output_stage1_lidar = torch.zeros_like(output_stage1_rgb)
-
-            output_stage1 = output_stage1_rgb + previous_stage
-            output_stage2 = self.res_conv2(output_stage1)
-
+            output_stage1_lidar = torch.zeros_like(output_stage1_rgb)
         if modal == 'lidar':
-            if previous_stage == None:
-                 previous_stage = torch.zeros_like(lidar)
             output_stage1_lidar = self.res_conv_xyz(lidar)
-           #output_stage1_rgb = torch.zeros_like(output_stage1_lidar)
-
-            output_stage1 = output_stage1_lidar + previous_stage
-            output_stage2 = self.res_conv2(output_stage1)
-
+            output_stage1_rgb = torch.zeros_like(output_stage1_lidar)
         if modal == 'cross_fusion': 
-            if previous_stage == None:
-                 previous_stage = torch.zeros_like(lidar) + torch.zeros_like(rgb)
-                 print('previous_stage:', previous_stage.shape)
-
             output_stage1_rgb = self.res_conv_rgb(rgb)
-            print('shape of stage 1_rgb:', output_stage1_rgb.shape)
             output_stage1_lidar = self.res_conv_xyz(lidar)
-            print('shape of stage 1_lidar:', output_stage1_lidar.shape)
 
-            output_stage_rgb_lidar = torch.cat(output_stage1_lidar, output_stage1_rgb)
-            output_stage1 = output_stage_rgb_lidar + previous_stage
-            print('shape of stage 1:', output_stage1.shape)
-            output_stage2 = self.res_conv2(output_stage1)
-
-            print('shape of stage 2:', output_stage2.shape)        
+        output_stage1 = output_stage1_lidar + output_stage1_rgb + previous_stage
+        output_stage2 = self.res_conv2(output_stage1)
+        
         output_stage2 = nn.functional.interpolate(output_stage2, scale_factor=2, mode="bilinear", align_corners=True)
         return output_stage2
 

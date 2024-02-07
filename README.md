@@ -1,41 +1,12 @@
-# TalTech_DriverlessProject
+# CLFT: Camera-LiDAR Fusion Transformer for Semantic Segmentation in Autonomous Driving
+  
+This repository contains the code for the paper 'CLFT: Camera-LiDAR Fusion Transformer for 
+Semantic Segmentation in Autonomous Driving' that currently submitted to the 
+IEEE Transactions on Intelligent Vehicles journal for reviewing. 
 
-## iseAuto dataset process
-Please make sure you have ROS, pcl-ros, openCV, catkin-build-tools installed
-
-The node converts pointcloud and compressed image topics to '.bin' and '.png' file refer to 
-[this](https://github.com/leofansq/Tools_RosBag2KITTI) project.
-
-Node subscribes lidar topic '/lidar_front/velodyne_points' and compressed image
-topic '/front_camera/image_color_rect/compressed'. Make sure remap the topics if you have 
-differnt names.
-
-```
-cd catkin_ws
-catkin build
-source devel/setup.bash
-rosrun ttu_autolab bags_to_files
-```
-
-There will be a 'png' and 'pcd' folder saved in path '~package/output'. Then run 
-'/devel/lib/ttu_autolab/pcd2bin', it will convert pcd files to bin files and save them 
-in the same path '~package/output'.
-
-The python script project lidar points to image takes three input arguments, images path,
-lidar path and transformation text file.
-
-```
-cd catkin_ws/src/ttu_autolab/script
-python3 lidar_camera_projection.py ../output/png ../output/bin ../config/calib.txt
-```
-
-There will be two folders 'lidar_rgb' and 'lidar_blank' saved in path '~package/output'.
-Please manually check the point-image alignment in 'lidar_rgb', is the alignment is not good,
-you can go to script to choose project previous and next lidar to the image until have 
-a good alignment. 
+Author is on vacation at the moment and will update the README afterwards.                                                             
 
 
-There are some other scripts  
 
 ## Training and Evaluation
 

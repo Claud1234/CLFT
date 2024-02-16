@@ -4,36 +4,26 @@ This repository contains the code for the paper 'CLFT: Camera-LiDAR Fusion Trans
 Semantic Segmentation in Autonomous Driving' that currently submitted to the 
 IEEE Transactions on Intelligent Vehicles journal for reviewing. 
 
-Author is on vacation at the moment and will update the README afterwards.                                                             
+In this work, we proposed a transformer network (CLFT) to fuse camera and LiDAR for semantic object segmentation. The expectation toward the CLFT is to outperform a [FCN network](https://doi.org/10.3390/electronics11071119) we proposed in the past. Therefore we carried out the experiment to compare these two networks with same input data. 
 
+The traning and testing scripts for both networks are included in this repository. The dataloader is specifcically for our own dataset. If you are interested in repeating our experiments, please contact claude.gujunyi@gmail.com Claude for the waymo and iseAuto dataset we used in the experiments.                                                     
 
+## How to Run
+The script 'visual_run.py' will load single camera (PNG) and LiDAR (PKL) file from folder 'test_images', then produce the segmentation result. The 'vehicle' class will be render as green color and 'human' class was redered as red. We provide the example CLFT and FCN [models](https://www.roboticlab.eu/claude/models/) for visualized prediction. 
+
+### CLFT
+```
+python visua_run.py -m <modality, chocies: 'rgb' 'lidar' 'cross_fusion> -bb dpt
+```
+
+### FCN
+```
+python visua_run.py -m <modality, chocies: 'rgb' 'lidar' 'cross_fusion> -bb fcn
+```
 
 ## Training and Evaluation
 
-## Prerequisites
-* Please make sure Python version in your machine is at least 3.6
-
-* The pytorch version is 1.8.1(stable). The training can be done either in CPU 
-or in GPU. The CUDA version this project has been tested with is 10.2. Please
-install the corresponding pytorch libraries over [here](https://pytorch.org/get-started/locally/)
-
-* tdpm
-    
-* python-opencv
-    
-* numpy
-    
-* pickle
-    
-* PIL
-
-## How To Run
-All the configurations were set up in configs module. Check and modify the 
-'DATAROOT', 'LOG_DIR' and 'SPLITS' in it. 
-
-Currently this project only can be ran locally in single machine, please specify
-'DEVICE' in configs module as 'cpu' for CPU training and 'cuda:<id of GPU> for GPU
-training. 
+## TO BE CONTINUE.....
 
 
 ### Training the model from the beginning

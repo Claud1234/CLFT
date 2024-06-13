@@ -86,12 +86,9 @@ def draw_test_segmentation_map(outputs):
 
 
 def image_overlay(image, segmented_image):
-    alpha = 0.6  # how much transparency to apply
+    alpha = 0.4  # how much transparency to apply
     beta = 1 - alpha  # alpha + beta should equal 1
     gamma = 0  # scalar added to each sum
-    image = np.array(image)
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    segmented_image = cv2.cvtColor(segmented_image, cv2.COLOR_RGB2BGR)
     cv2.addWeighted(segmented_image, alpha, image, beta, gamma, image)
     return image
 

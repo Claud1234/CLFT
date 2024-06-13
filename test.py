@@ -17,8 +17,8 @@ with open('config.json', 'r') as f:
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('-bb', '--backbone', required=True,
-                    choices=['fcn', 'dpt'],
-                    help='Use the backbone of training, dpt or fcn')
+                    choices=['clfcn', 'clft'],
+                    help='Use the backbone of training, clft or clfcn')
 # parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
 #                     help='Reset LR to initial value defined in configs')
 # parser.add_argument('-p', '--model_path', dest='model_path',

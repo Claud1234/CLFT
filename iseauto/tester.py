@@ -9,10 +9,10 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
-from fcn.fusion_net import FusionNet
+from clfcn.fusion_net import FusionNet
 from utils.metrics import find_overlap
 from utils.metrics import auc_ap
-from dpt.dpt import DPT
+from clft.clft import CLFT
 
 
 class Tester(object):
@@ -26,7 +26,7 @@ class Tester(object):
 								   if torch.cuda.is_available() else "cpu")
 		print("device: %s" % self.device)
 
-		if args.backbone == 'fcn':
+		if args.backbone == 'clfcn':
 			self.model = FusionNet()
 			print(f'Using backbone {args.backbone}')
 			self.optimizer_fcn = torch.optim.Adam(self.model.parameters(),
@@ -34,9 +34,9 @@ class Tester(object):
 								f"lr_{config['General']['sensor_modality']}"])
 			self.scheduler_fcn = ReduceLROnPlateau(self.optimizer_fcn)
 
-		elif args.backbone == 'dpt':
+		elif args.backbone == 'clft':
 			resize = config['Dataset']['transforms']['resize']
-			self.model = DPT(
+			self.model = CLFT(
 				RGB_tensor_size=(3, resize, resize),
 				XYZ_tensor_size=(3, resize, resize),
 				emb_dim=config['General']['emb_dim'],
@@ -54,7 +54,7 @@ class Tester(object):
 								map_location=self.device)['model_state_dict'])
 
 		else:
-			sys.exit("A backbone must be specified! (dpt or fcn)")
+			sys.exit("A backbone must be specified! (clft or clfcn)")
 
 		self.model.to(self.device)
 		self.nclasses = len(config['Dataset']['classes'])

@@ -5,14 +5,14 @@ import timm
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
-from dpt.reassemble import Reassemble
-from dpt.fusion import Fusion
-from dpt.head import HeadDepth, HeadSeg
+from clft.reassemble import Reassemble
+from clft.fusion import Fusion
+from clft.head import HeadDepth, HeadSeg
 
 torch.manual_seed(0)
 
 
-class DPT(nn.Module):
+class CLFT(nn.Module):
     def __init__(self,
                  RGB_tensor_size=(3, 384, 384),
                  XYZ_tensor_size=(3, 384, 384),

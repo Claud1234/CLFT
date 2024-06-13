@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
 import configs
-from fcn.fusion_net import FusionNet
+from clfcn.fusion_net import FusionNet
 from utils.lidar_process import open_lidar
 from utils.lidar_process import get_unresized_lid_img_val
 from utils.helpers import draw_test_segmentation_map

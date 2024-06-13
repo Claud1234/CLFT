@@ -4,11 +4,42 @@ This repository contains the code for the paper 'CLFT: Camera-LiDAR Fusion Trans
 Semantic Segmentation in Autonomous Driving' that currently submitted to the 
 IEEE Transactions on Intelligent Vehicles journal for reviewing. 
 
-In this work, we proposed a transformer network (CLFT) to fuse camera and LiDAR for semantic object segmentation. The expectation toward the CLFT is to outperform a [FCN network](https://doi.org/10.3390/electronics11071119) we proposed in the past. Therefore we carried out the experiment to compare these two networks with same input data. 
+This repository contains the source code of training and testing for CLFT and CLFCN models. 
 
-The traning and testing scripts for both networks are included in this repository. The dataloader is specifically for our own dataset. If you are interested in repeating our experiments, please contact claude.gujunyi@gmail.com Claude for the waymo and iseAuto dataset we used in the experiments.                                                     
+Please note that this repository is still under maintance. Author is focusing on his PhD thsis at the moment and will chean up code and optimize README gradually. You can write to claude.gujunyi@gmail.com for details. 
 
-## How to Run
+TODO list here:
+Provide segmentation videos of Waymo Open Dataset for three models campared in paper. CLFT, [CLFCN](https://doi.org/10.3390/electronics11071119) 
+and [Panoptic SegFormer](https://arxiv.org/abs/2109.03814)
+                                                     
+
+## Abstract
+Critical research about camera-and-LiDAR-based semantic object segmentation for autonomous driving significantly benefited from the recent development of deep learning. 
+Specifically, the vision transformer is the novel ground-breaker that successfully brought the multi-head-attention mechanism to computer vision applications. 
+Therefore, we propose a vision-transformer-based network to carry out camera-LiDAR fusion for semantic segmentation applied to autonomous driving. 
+Our proposal uses the novel progressive-assemble strategy of vision transformers on a double-direction network and then integrates the results in a cross-fusion strategy over the transformer decoder layers. 
+Unlike other works in the literature, our camera-LiDAR fusion transformers have been evaluated in challenging conditions like rain and low illumination, showing robust performance. 
+The paper reports the segmentation results over the vehicle and human classes in different modalities: camera-only, LiDAR-only, and camera-LiDAR fusion. 
+We perform coherent controlled benchmark experiments of CLFT against other networks that are also designed for semantic segmentation. 
+The experiments aim to evaluate the performance of CLFT independently from two perspectives: multimodal sensor fusion and backbone architectures. 
+The quantitative assessments show our CLFT networks yield an improvement of up to 10\% for challenging dark-wet conditions 
+when comparing with Fully-Convolutional-Neural-Network-based (FCN) camera-LiDAR fusion neural network. 
+Contrasting to the network with transformer backbone but using single modality input, the all-around improvement is 5-10\%. 
+
+## Method
+
+The framework overview diagram will be available here as soon as the perprint of paper is available. 
+
+## Installation 
+
+The experiments were carried out on TalTech HPC. For CLFT and CLFCN, we progrmmed upon pytorch directly and avoid too much high-level apis, thus we believe the code should be compatible with various environments. Here list out the package versions on HPC:
+
+
+## Dataset
+
+
+## RUN 
+
 The script 'visual_run.py' will load single camera (PNG) and LiDAR (PKL) file from folder 'test_images', then produce the segmentation result. The 'vehicle' class will be rendered as green color and 'human' class was rendered as red. We provide the example CLFT and FCN [models](https://www.roboticlab.eu/claude/models/) for visualized prediction. 
 
 ### CLFT

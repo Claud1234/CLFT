@@ -14,5 +14,10 @@ logs
 install
 result_screenshots
 .idea
-config.json
 .ipy*
+.ipython*
+ipython/test_img
+*.pth
+*.json
+*.png
+*.pkl

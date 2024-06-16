@@ -38,32 +38,15 @@ class CLFT(nn.Module):
         """
         super().__init__()
 
-        #Splitting img into patches
-        # channels, image_height, image_width = image_size
-        # assert image_height % patch_size == 0 and image_width % patch_size == 0, 'Image dimensions must be divisible by the patch size.'
-        # num_patches = (image_height // patch_size) * (image_width // patch_size)
-        # patch_dim = channels * patch_size * patch_size
-        # self.to_patch_embedding = nn.Sequential(
-        #     Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size),
-        #     nn.Linear(patch_dim, emb_dim),
-        # )
-        # #Embedding
-        # self.cls_token = nn.Parameter(torch.randn(1, 1, emb_dim))
-        # self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, emb_dim))
-
-        #Transformer
-        # encoder_layer = nn.TransformerEncoderLayer(d_model=emb_dim, nhead=nhead, dropout=transformer_dropout, dim_feedforward=emb_dim*4)
-        # self.transformer_encoders = nn.TransformerEncoder(encoder_layer, num_layers=num_layers_encoder)
-        self.transformer_encoders = timm.create_model(model_timm,
-                                                      pretrained=True)
+        self.transformer_encoders = timm.create_model(model_timm, pretrained=True)
         self.type_ = type
 
-        #Register hooks
+        # Register hooks
         self.activation = {}
         self.hooks = hooks
         self._get_layers_from_hooks(self.hooks)
 
-        #Reassembles Fusion
+        # Reassembles Fusion
         self.reassembles_RGB = []
         self.reassembles_XYZ = []
         self.fusions = []
@@ -86,14 +69,7 @@ class CLFT(nn.Module):
             self.head_depth = None
             self.head_segmentation = HeadSeg(resample_dim, nclasses=nclasses)
 
-    def forward(self, rgb, lidar, modal = 'rgb'):
-        # x = self.to_patch_embedding(img)
-        # b, n, _ = x.shape
-        # cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
-        # x = torch.cat((cls_tokens, x), dim=1)
-        # x += self.pos_embedding[:, :(n + 1)]
-        # t = self.transformer_encoders(x)
-
+    def forward(self, rgb, lidar, modal='rgb'):
         t = self.transformer_encoders(lidar)
         previous_stage = None
         for i in np.arange(len(self.fusions)-1, -1, -1):
@@ -118,10 +94,6 @@ class CLFT(nn.Module):
         if self.head_segmentation != None:
             out_segmentation = self.head_segmentation(previous_stage)
         return out_depth, out_segmentation
-        
-        
-        
-
 
     def _get_layers_from_hooks(self, hooks):
         def get_activation(name):

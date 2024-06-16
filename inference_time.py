@@ -94,7 +94,7 @@ def run(modality, backbone, config):
     lidar = open_input.open_lidar().to(device, non_blocking=True)
     lidar = lidar.unsqueeze(0)
 
-    if backbone == 'fcn':
+    if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
         checkpoint = torch.load(
@@ -129,7 +129,7 @@ def run(modality, backbone, config):
         std_syn = np.std(timings)
         print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
 
-    elif backbone == 'dpt':
+    elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
         model = CLFT(
             RGB_tensor_size=(3, resize, resize),

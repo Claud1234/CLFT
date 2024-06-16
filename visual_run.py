@@ -9,13 +9,10 @@ ipython/make_qualitative_images.ipynb
 import os
 import cv2
 import sys
-import time
 import torch
 import argparse
 import numpy as np
 from PIL import Image
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
@@ -29,8 +26,6 @@ from utils.lidar_process import get_unresized_lid_img_val
 from iseauto.dataset import lidar_dilation
 
 from utils.helpers import draw_test_segmentation_map, image_overlay
-from utils.metrics import find_overlap
-from utils.metrics import auc_ap
 
 
 class OpenInput(object):
@@ -168,12 +163,13 @@ def run(modality, backbone, config):
         lidar = lidar.unsqueeze(0)
 
         with torch.no_grad():
-            _, output_seg = model(rgb, lidar, 'cross_fusion')
+            _, output_seg = model(rgb, lidar, modality)
             segmented_image = draw_test_segmentation_map(output_seg)
             seg_resize = cv2.resize(segmented_image, (480, 160))
 
-        seg_path = cam_path.replace('waymo/labeled', 'clft_seg_results/hybird_fusion/segment')
-        overlay_path = cam_path.replace('waymo/labeled', 'clft_seg_results/hybird_fusion/overlay')
+        seg_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/segment')
+        overlay_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/overlay')
+
         print(f'saving segment result {i}...')
         cv2.imwrite(seg_path, seg_resize)
 

@@ -6,7 +6,6 @@ import argparse
 import numpy as np
 
 from torch.utils.data import DataLoader
-from torch.utils.data import ConcatDataset
 
 from iseauto.tester import Tester
 from iseauto.dataset import Dataset

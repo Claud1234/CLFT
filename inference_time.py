@@ -97,8 +97,7 @@ def run(modality, backbone, config):
     if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        checkpoint = torch.load(
-            './checkpoint_289_fusion.pth', map_location=device)
+        checkpoint = torch.load('./model_path/clfcn/checkpoint_289_fusion.pth', map_location=device)
 
         model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -112,13 +111,13 @@ def run(modality, backbone, config):
 
         # GPU-WARM-UP
         for _ in range(2000):
-            _ = model(rgb, lidar, 'all')
+            _ = model(rgb, lidar, 'cross_fusion')
         print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
-                output_seg = model(rgb, lidar, 'all')
+                output_seg = model(rgb, lidar, 'cross_fusion')
                 ender.record()
                 # wait for GPU sync
                 torch.cuda.synchronize()

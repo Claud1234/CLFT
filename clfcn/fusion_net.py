@@ -10,21 +10,16 @@ class FusionNet(nn.Module):
     def __init__(self):
         super(FusionNet, self).__init__()
 
-        self.backbone_rgb, self.intermediate_single_rgb, self.classifier_rgb =\
-            self.get_split_model()
+        self.backbone_rgb, self.intermediate_single_rgb, self.classifier_rgb =self.get_split_model()
 
-        self.backbone_lidar, self.intermediate_single_lidar,\
-            self.classifier_lidar = self.get_split_model()
+        self.backbone_lidar, self.intermediate_single_lidar, self.classifier_lidar = self.get_split_model()
 
-        _, self.intermediate_single_fusion, self.classifier_fusion =\
-            self.get_split_model(isFusion=True)
+        _, self.intermediate_single_fusion, self.classifier_fusion = self.get_split_model(isFusion=True)
 
     def get_split_model(self, isFusion=False):
-        full_model = torchvision.models.segmentation.fcn_resnet50(
-                                            pretrained=False, num_classes=4)
+        full_model = torchvision.models.segmentation.fcn_resnet50(pretrained=False, num_classes=4)
         backbone = nn.Sequential(*list(full_model.backbone.children())[:-1])
-        intermediate_single = nn.Sequential(
-                                    *list(full_model.backbone.children())[-1:])
+        intermediate_single = nn.Sequential(*list(full_model.backbone.children())[-1:])
         classifier = nn.Sequential(*list(full_model.classifier.children()))
 
         if isFusion:
@@ -39,7 +34,7 @@ class FusionNet(nn.Module):
 
         _, _, h, w = rgb.shape
 
-        if modal == 'all':
+        if modal == 'cross_fusion':
             features_rgb = self.backbone_rgb(rgb)
             features_lidar = self.backbone_lidar(lidar)
             features_fusion = torch.cat((features_rgb, features_lidar), dim=1)
@@ -51,12 +46,9 @@ class FusionNet(nn.Module):
             out_fusion = self.classifier_fusion(
                 self.intermediate_single_fusion(features_fusion))
 
-            out_rgb = F.interpolate(out_rgb, size=(h, w),
-                                    mode='bilinear', align_corners=False)
-            out_lidar = F.interpolate(out_lidar, size=(h, w),
-                                      mode='bilinear', align_corners=False)
-            out_fusion = F.interpolate(out_fusion, size=(h, w),
-                                       mode='bilinear', align_corners=False)
+            out_rgb = F.interpolate(out_rgb, size=(h, w), mode='bilinear', align_corners=False)
+            out_lidar = F.interpolate(out_lidar, size=(h, w), mode='bilinear', align_corners=False)
+            out_fusion = F.interpolate(out_fusion, size=(h, w),  mode='bilinear', align_corners=False)
 
             out = {}
             out['rgb'] = out_rgb
@@ -67,8 +59,7 @@ class FusionNet(nn.Module):
             features_rgb = self.backbone_rgb(rgb)
             out_rgb = self.classifier_rgb(
                 self.intermediate_single_rgb(features_rgb))
-            out_rgb = F.interpolate(out_rgb, size=(h, w),
-                                    mode='bilinear', align_corners=False)
+            out_rgb = F.interpolate(out_rgb, size=(h, w), mode='bilinear', align_corners=False)
 
             out = {}
             out['rgb'] = out_rgb
@@ -77,40 +68,9 @@ class FusionNet(nn.Module):
             features_lidar = self.backbone_lidar(lidar)
             out_lidar = self.classifier_lidar(
                 self.intermediate_single_lidar(features_lidar))
-            out_lidar = F.interpolate(out_lidar, size=(h, w),
-                                      mode='bilinear', align_corners=False)
+            out_lidar = F.interpolate(out_lidar, size=(h, w), mode='bilinear', align_corners=False)
 
             out = {}
             out['lidar'] = out_lidar
-
-        elif modal == 'cross_fusion':
-            features_rgb = self.backbone_rgb(rgb)
-            features_lidar = self.backbone_lidar(lidar)
-            features_fusion = torch.cat((features_rgb, features_lidar), dim=1)
-
-            out_fusion = self.classifier_fusion(
-                self.intermediate_single_fusion(features_fusion))
-            out_fusion = F.interpolate(out_fusion, size=(h, w),
-                                       mode='bilinear', align_corners=False)
-
-            out = {}
-            out['cross_fusion'] = out_fusion
-
-        elif modal == 'ind':
-            features_rgb = self.backbone_rgb(rgb)
-            out_rgb = self.classifier_rgb(
-                self.intermediate_single_rgb(features_rgb))
-            out_rgb = F.interpolate(out_rgb, size=(h, w),
-                                    mode='bilinear', align_corners=False)
-
-            features_lidar = self.backbone_lidar(lidar)
-            out_lidar = self.classifier_lidar(
-                self.intermediate_single_lidar(features_lidar))
-            out_lidar = F.interpolate(out_lidar, size=(h, w),
-                                      mode='bilinear', align_corners=False)
-
-            out = {}
-            out['lidar'] = out_lidar
-            out['rgb'] = out_rgb
 
         return out

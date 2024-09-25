@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
+"""
+This is the script to load the all input frames to feed to model path file to compute the qualitative overlay results.
+Currently it only works for CLFT model paths and Waymo dataset. It loads the config.json file for important
+inforamtion, so you have to set the things like CLFT variants, model path, and other things in json file.
+If you want to see how it works for single input frame, you can refer the ipython notebook in
+ipython/make_qualitative_images.ipynb
+ONLY WORK FOR WAYMO DATASET
+
+updated on 16,06.2024.
+CLFCN is also working now. Remember you still need to modify this script to set the resulting saving path.
+"""
+import os
 import cv2
 import sys
-import time
 import torch
 import argparse
 import numpy as np
 from PIL import Image
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
 import json
-from dpt.dpt import DPT
-from fcn.fusion_net import FusionNet
+from clft.clft import CLFT
+from clfcn.fusion_net import FusionNet
 from utils.helpers import waymo_anno_class_relabel
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
@@ -21,37 +30,46 @@ from utils.lidar_process import get_unresized_lid_img_val
 from iseauto.dataset import lidar_dilation
 
 from utils.helpers import draw_test_segmentation_map, image_overlay
-from utils.metrics import find_overlap
-from utils.metrics import auc_ap
 
 
 class OpenInput(object):
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, backbone, cam_mean, cam_std, lidar_mean, lidar_std, w_ratio, h_ratio):
+        self.backbone = backbone
+        self.cam_mean = cam_mean
+        self.cam_std = cam_std
+        self.lidar_mean = lidar_mean
+        self.lidar_std = lidar_std
+        self.w_ratio = w_ratio
+        self.h_ratio = h_ratio
 
-    def open_rgb(self):
-        rgb_normalize = transforms.Compose(
-            [transforms.Resize((384, 384),
-                    interpolation=transforms.InterpolationMode.BILINEAR),
+    def open_rgb(self, image_path):
+        clft_rgb_normalize = transforms.Compose(
+            [transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.ToTensor(),
                 transforms.Normalize(
-                    mean=self.config['Dataset']['transforms']['image_mean'],
-                    std=self.config['Dataset']['transforms']['image_mean'])])
+                    mean=self.cam_mean,
+                    std=self.cam_std)])
 
-        rgb = Image.open('./test_images/test_1_img.png').convert('RGB')
+        clfcn_rgb_normalize = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize(mean=self.cam_mean, std=self.cam_std)])
+
+        rgb = Image.open(image_path).convert('RGB')
         # image = Image.open(
         #       '/home/claude/Data/claude_iseauto/labeled/night_fair/rgb/sq14_000061.png').\
         #         resize((480, 320)).convert('RGB')
         w_orig, h_orig = rgb.size  # original image's w and h
         delta = int(h_orig/2)
         top_crop_rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)
-        top_rgb_norm = rgb_normalize(top_crop_rgb)
+        if self.backbone == 'clft':
+            top_rgb_norm = clft_rgb_normalize(top_crop_rgb)
+        elif self.backbone == 'clfcn':
+            top_rgb_norm = clfcn_rgb_normalize(top_crop_rgb)
         return top_rgb_norm
 
-    def open_anno(self):
-        anno_resize = transforms.Resize((384, 384),
-                        interpolation=transforms.InterpolationMode.NEAREST)
-        anno = Image.open('./test_images/anno_human.png')
+    def open_anno(self, anno_path):
+        clft_anno_resize = transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.NEAREST)
+        anno = Image.open(anno_path)
+
         anno = waymo_anno_class_relabel(anno)
         # annotation = Image.open(
         #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
@@ -59,16 +77,17 @@ class OpenInput(object):
         w_orig, h_orig = anno.size  # PIL tuple. (w, h)
         delta = int(h_orig/2)
         top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
-        anno_resize = anno_resize(top_crop_anno).squeeze(0)
+        if self.backbone == 'clft':
+            anno_resize = clft_anno_resize(top_crop_anno).squeeze(0)
         return anno_resize
 
-    def open_lidar(self):
+    def open_lidar(self, lidar_path):
         points_set, camera_coord = open_lidar(
-            './test_images/test_1_lidar.pkl',
-            w_ratio=4,
-            h_ratio=4,
-            lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
-            lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])
+           lidar_path,
+            w_ratio=self.w_ratio,
+            h_ratio=self.h_ratio,
+            lidar_mean=self.lidar_mean,
+            lidar_std=self.lidar_std)
 
         top_crop_points_set, top_crop_camera_coord, _ = crop_pointcloud(
             points_set, camera_coord, 160, 0, 160, 480)
@@ -76,9 +95,11 @@ class OpenInput(object):
                                             top_crop_points_set,
                                             top_crop_camera_coord)
         X, Y, Z = lidar_dilation(X, Y, Z)
-        X = transforms.Resize((384, 384))(X)
-        Y = transforms.Resize((384, 384))(Y)
-        Z = transforms.Resize((384, 384))(Z)
+
+        if self.backbone == 'clft':
+            X = transforms.Resize((384, 384))(X)
+            Y = transforms.Resize((384, 384))(Y)
+            Z = transforms.Resize((384, 384))(Z)
 
         X = TF.to_tensor(np.array(X))
         Y = TF.to_tensor(np.array(Y))
@@ -88,75 +109,30 @@ class OpenInput(object):
         return lid_images
 
 
-# # print(outputs.shape)
-# overlap, pred, label, union = find_overlap(outputs, annotation)
-# print('overlap', overlap)
-# print('pred', pred)
-# print('anno', label)
-# IoU = 1.0 * overlap / (np.spacing(1) + union)
-# precision = 1.0 * overlap / (np.spacing(1) + pred)
-# recall = 1.0 * overlap / (np.spacing(1) + label)
-# print('IoU:', IoU)
-# print('precision:', precision)
-# print('recall:', recall)
-# while True:
-#     cv2.imshow("result.jpg", result)
-#     cv2.waitKey(30)
-#     if cv2.getWindowProperty("result.jpg", cv2.WND_PROP_VISIBLE) <= 0:
-#         break
-#
-# cv2.destroyWindow("result.jpg")
-
 def run(modality, backbone, config):
     device = torch.device(config['General']['device']
                           if torch.cuda.is_available() else "cpu")
-    open_input = OpenInput(config)
-    rgb = open_input.open_rgb().to(device, non_blocking=True)
-    rgb = rgb.unsqueeze(0)  # add a batch dimension
-    lidar = open_input.open_lidar().to(device, non_blocking=True)
-    lidar = lidar.unsqueeze(0)
+    open_input = OpenInput(backbone,
+                           cam_mean=config['Dataset']['transforms']['image_mean'],
+                           cam_std=config['Dataset']['transforms']['image_mean'],
+                           lidar_mean=config['Dataset']['transforms']['lidar_mean_waymo'],
+                           lidar_std=config['Dataset']['transforms']['lidar_mean_waymo'],
+                           w_ratio=4,
+                           h_ratio=4)
 
-    if backbone == 'fcn':
+    if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        checkpoint = torch.load(
-            './checkpoint_289_fusion.pth', map_location=device)
+        # TODO: add the clfcn-related configs in config.json
+        checkpoint = torch.load('./model_path/clfcn/checkpoint_289_fusion.pth', map_location=device)
 
         model.load_state_dict(checkpoint['model_state_dict'])
-
         model.to(device)
         model.eval()
 
-        # init time logger
-        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-        repetitions = 2000
-        timings=np.zeros((repetitions,1))
-
-        #GPU-WARM-UP
-        for _ in range(2000):
-            _ = model(rgb, lidar, 'all')
-        print('GPU warm up is done with 2000 iterations')
-
-        with torch.no_grad():
-            for rep in range(repetitions):
-                starter.record()
-                output_seg = model(rgb, lidar, 'all')
-                ender.record()
-                # wait for GPU sync
-                torch.cuda.synchronize()
-                curr_time = starter.elapsed_time(ender)
-                timings[rep] = curr_time
-
-        mean_syn = np.sum(timings) / repetitions
-        std_syn = np.std(timings)
-        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
-
-
-        output_seg = model(rgb, lidar, modality)
-
-    elif backbone == 'dpt':
+    elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
-        model = DPT(
+        model = CLFT(
             RGB_tensor_size=(3, resize, resize),
             XYZ_tensor_size=(3, resize, resize),
             emb_dim=config['General']['emb_dim'],
@@ -170,50 +146,74 @@ def run(modality, backbone, config):
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
-        model.load_state_dict(torch.load(model_path, map_location=device)[
-                                  'model_state_dict'])
-
+        model.load_state_dict(torch.load(model_path, map_location=device)['model_state_dict'])
         model.to(device)
         model.eval()
 
-        # init time logger
-#        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-#        repetitions = 2000
-#        timings=np.zeros((repetitions,1))
-
-        #GPU-WARM-UP
-#        for _ in range(2000):
-#            _,_ = model(rgb, lidar, modality)
-#        print('GPU warm up is done with 2000 iterations')
-
-        with torch.no_grad():
- #           for rep in range(repetitions):
- #               starter.record()
-                _, output_seg = model(rgb, lidar, modality)
- #               ender.record()
-                # wait for GPU sync
- #               torch.cuda.synchronize()
- #               curr_time = starter.elapsed_time(ender)
- #               timings[rep] = curr_time
-
-#        mean_syn = np.sum(timings) / repetitions
-#        std_syn = np.std(timings)
-#        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
-#        exe_time = time.time() - start
-#        print(f'Executed in {exe_time*1000} miliseconds')
-        segmented_image = draw_test_segmentation_map(output_seg)
-
-        # resize = transforms.Compose([transforms.ToPILImage(),
-        #             transforms.Resize((160, 480),
-        #             interpolation=transforms.InterpolationMode.BILINEAR)])
-        # seg_resize = resize(segmented_image)
-
-        seg_resize = cv2.resize(segmented_image, (480, 160))
-        #result = image_overlay(rgb, segmented_image)
-        cv2.imwrite('./dpt_seg_visual.png',seg_resize)
-
     else:
-        sys.exit("A backbone must be specified! (dpt or fcn)")
+        sys.exit("A backbone must be specified! (clft or clfcn)")
+
+    waymo_all_list = open('/home/autolab/Data/waymo/splits_clft/all.txt', 'r')
+    waymo_all_cam = np.array(waymo_all_list.read().splitlines())
+    waymo_all_list.close()
+
+    i = 1
+    dataroot = '/home/autolab/Data/waymo/'
+    for path in waymo_all_cam:
+        cam_path = os.path.join(dataroot, path)
+        anno_path = cam_path.replace('/camera', '/annotation')
+        lidar_path = cam_path.replace('/camera', '/lidar').replace('.png', '.pkl')
+
+        rgb_name = cam_path.split('/')[-1].split('.')[0]
+        anno_name = anno_path.split('/')[-1].split('.')[0]
+        lidar_name = lidar_path.split('/')[-1].split('.')[0]
+        assert (rgb_name == lidar_name)
+        assert (anno_name == lidar_name)
+
+        rgb = open_input.open_rgb(cam_path).to(device, non_blocking=True)
+        rgb = rgb.unsqueeze(0)  # add a batch dimension
+        lidar = open_input.open_lidar(lidar_path).to(device, non_blocking=True)
+        lidar = lidar.unsqueeze(0)
+
+        if backbone == 'clft':
+            with torch.no_grad():
+                _, output_seg = model(rgb, lidar, modality)
+                segmented_image = draw_test_segmentation_map(output_seg)
+                seg_resize = cv2.resize(segmented_image, (480, 160))
+
+                seg_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/segment')
+                overlay_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/overlay')
+
+                print(f'saving segment result {i}...')
+                cv2.imwrite(seg_path, seg_resize)
+
+                rgb_cv2 = cv2.imread(cam_path)
+                rgb_cv2_top = rgb_cv2[160:320, 0:480]
+                overlay = image_overlay(rgb_cv2_top, seg_resize)
+                print(f'saving overlay result {i}...')
+                cv2.imwrite(overlay_path, overlay)
+
+        elif backbone == 'clfcn':
+            with torch.no_grad():
+                output_seg = model(rgb, lidar, modality)
+                output_seg = output_seg[modality]
+                segmented_image = draw_test_segmentation_map(output_seg)
+
+                seg_path = cam_path.replace('waymo/labeled', 'clfcn_seg_results/clfcn_fusion/segment')
+                overlay_path = cam_path.replace('waymo/labeled', 'clfcn_seg_results/clfcn_fusion/overlay')
+
+                print(f'saving segment result {i}...')
+                cv2.imwrite(seg_path, segmented_image)
+
+                rgb_cv2 = cv2.imread(cam_path)
+                rgb_cv2_top = rgb_cv2[160:320, 0:480]
+                overlay = image_overlay(rgb_cv2_top, segmented_image)
+                print(f'saving overlay result {i}...')
+                cv2.imwrite(overlay_path, overlay)
+
+        else:
+            sys.exit("A backbone must be specified! (clft or clfcn)")
+        i += 1
 
 
 if __name__ == '__main__':
@@ -222,8 +222,8 @@ if __name__ == '__main__':
                         choices=['rgb', 'lidar', 'cross_fusion'],
                         help='Output mode (lidar, rgb or cross_fusion)')
     parser.add_argument('-bb', '--backbone', required=True,
-                        choices=['fcn', 'dpt'],
-                        help='Use the backbone of training, dpt or fcn')
+                        choices=['clfcn', 'clft'],
+                        help='Use the backbone of training, clft or clfcn')
     args = parser.parse_args()
 
     with open('config.json', 'r') as f:

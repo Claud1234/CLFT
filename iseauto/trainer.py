@@ -9,9 +9,9 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
-from fcn.fusion_net import FusionNet
+from clfcn.fusion_net import FusionNet
 from utils.metrics import find_overlap
-from dpt.dpt import DPT
+from clft.clft import CLFT
 from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
 from utils.helpers import adjust_learning_rate
@@ -60,7 +60,7 @@ class Trainer(object):
 
         elif args.backbone == 'dpt':
             resize = config['Dataset']['transforms']['resize']
-            self.model = DPT(
+            self.model = CLFT(
                 RGB_tensor_size=(3, resize, resize),
                 XYZ_tensor_size=(3, resize, resize),
                 emb_dim=config['General']['emb_dim'],

@@ -1,0 +1,8 @@
+numpy-1.26.1
+torch-2.1.0
+tqdm-4.66.1
+tensorboard-2.15.0
+torchvision-0.16.0
+timm==0.9.8
+einops-0.7.0
+opencv_python-4.8.1.78

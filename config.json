@@ -1,6 +1,6 @@
 {
     "General":{
-        "device":"cpu",
+        "device":"cuda:0",
         "sensor_modality": "cross_fusion",
         "fcn": {
             "lr_rgb":0.00006,
@@ -12,7 +12,7 @@
         },
         "dpt_lr":8e-5,
         "type":"segmentation",
-        "model_timm":"vit_base_resnet50_384",
+        "model_timm":"vit_base_patch16_384",
         "emb_dim":768,
         "hooks":[2, 5, 8, 11],
         "read":"projection",
@@ -27,10 +27,10 @@
         "patch_size":16,
         "resume_training":true,
         "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
-	"reset_lr":false,
+	    "reset_lr":false,
         "early_stop_patience": 50,
         "save_epoch": 20,
-        "model_path":"./checkpoint_374.pth"
+        "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
     },
     "Log": {
         "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",

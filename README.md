@@ -11,10 +11,9 @@ https://github.com/user-attachments/assets/cd51585e-2f66-4ff5-bb5b-689d3fb7d4c0
 
 
 # News
+- [25-09-2024] The author fianlly finished his PhD thesis work and start to maintain the repo. The visual_run.py script is available. The waymo dataset used for the experimetns in paper is available for downloading. 
 - [16/04/2024] Please note that this repository is still under maintance. Author is focusing on his PhD thsis at the moment and will chean up code and optimize README gradually. You can write to claude.gujunyi@gmail.com for details. 
-TODO list here:
-Provide segmentation videos of Waymo Open Dataset for three models campared in paper. CLFT, [CLFCN](https://doi.org/10.3390/electronics11071119) 
-and [Panoptic SegFormer](https://arxiv.org/abs/2109.03814)
+
 
 
 ## Abstract
@@ -33,104 +32,46 @@ The experiments were carried out on TalTech HPC. For CLFT and CLFCN, we progrmme
 ## Dataset
 - [Dataset](waymo_dataset/README.md)
 
-## RUN 
+## Visualization 
+We provide the 'visual_run.py' to load the model path and input data, then render out the segmentation and ovelay results as PNG images. 
 
-The script 'visual_run.py' will load single camera (PNG) and LiDAR (PKL) file from folder 'test_images', then produce the segmentation result. The 'vehicle' class will be rendered as green color and 'human' class was rendered as red. We provide the example CLFT and FCN [models](https://www.roboticlab.eu/claude/models/) for visualized prediction. 
-
-### CLFT
-```
-python visua_run.py -m <modality, chocies: 'rgb' 'lidar' 'cross_fusion> -bb dpt
-```
-
-Here is the example of the CLFT segmentation prediction:
-
-![dpt_seg_visual](https://github.com/Claud1234/fcn_transformer_object_segmentation/assets/43088344/305b4613-906b-444f-91b5-83d40abfc556)
-
-### FCN
-```
-python visua_run.py -m <modality, chocies: 'rgb' 'lidar' 'cross_fusion> -bb fcn
-```
-
-Here is the example of the FCN segmentation prediction:
-
-## Training and Testing
-The parameters related to the training and testing all defined in file 'config.json'. Here list some important defination in this file.
-
-* [General][sensors_modality] --> Model modalities, choose 'rgb' 'lidar' or 'cross_fusion'.
-* [General][model_timm] --> The backbone of CLFT variants. We proposed base, large, and hybrid in the paper. choose 'vit_base_patch16_384' 'vit_large_patch16_384' 'vit_base_resnet50_384'
-* [General][emb_dim] --> The embedded dimension for CLFT models, 768 for base and hybrid, 1024 for large.
-* [General][resume_training] --> The flag to resume training from saved path. Set to false for scratch training.
-* [Log] --> Place to save the model paths. 
-* [Dataset][name] --> We provide two datasets, choose 'waymo' or 'iseauto'. The pre-processing parameters of these two datasets are different.  
+Specify three args for this script. \
+-m -> modalitity. Choices: rgb, lidar, cross_fusion \
+-bb -> backbonw. Choices: clfcn, clft\
+-p -> the txt file contains the paths of input data.
 
 ### CLFT
-Training.
 ```
-python3 train.py -bb dpt
+python visual_run.py -m cross_fusion -bb clft -p ./waymo_dataset/visual_run_demo.txt
 ```
- 
-If want to resume the training, use the same command but modify the 'resume_training' flag in 'config.json' file.
-
-Testing.
-```
-python3 test.py -bb dpt
-```
+The 'visual_run_demo.txt' is existed in 'waymo_dataset' folder, it contains four samples scattered to four weather subset, light-dry, light-wet, night-dry, and night-wet. But please note you need to have our waymo dataset downloaded and placed in the 'waymo_dataset' folder. The segmentation and overlay results of these four samples will be saved in 'output' folder and followed the same path tree specified in this repo. We provide the PNG results of four smaples in 'output' folder as well.
 
 ### FCN
-Training.
+
+## Training
+### CLFT
+
+### FCN
+
+
+## Testing
+### CLFT
+
+### CLFCN
+
+## Bibtex
+If anything in this repo has a use for your work, please considering to cite our work. This is very helpful for the author who just finished his PhD and started to build his academic career. 
+
 ```
-python3 train.py -bb fcn
+@ARTICLE{gu2024clft,
+  author={Gu, Junyi and Bellone, Mauro and Pivoňka, Tomáš and Sell, Raivo},
+  journal={IEEE Transactions on Intelligent Vehicles}, 
+  title={CLFT: Camera-LiDAR Fusion Transformer for Semantic Segmentation in Autonomous Driving}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={1-12},
+  doi={10.1109/TIV.2024.3454971}}
 ```
 
-Testing.
-```
-python3 test.py -bb fcn
-```
 
-
-## TO BE CONTINUE....
-
-
-[//]: # (### Training the model from the beginning)
-
-[//]: # (```)
-
-[//]: # (python3 train.py -r no)
-
-[//]: # (```)
-
-[//]: # (### Training the model from the checkpoint)
-
-[//]: # (First make sure the epochs you set in configs module is bigger than the finished )
-
-[//]: # (epochs which are saved in checkpoint.)
-
-[//]: # ()
-[//]: # (```)
-
-[//]: # (python3 train.py -r yes -p <path to checkpoint model>)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (### Test the model with single input files)
-
-[//]: # (```)
-
-[//]: # (python3 test.py)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (### Evaluate the model)
-
-[//]: # (Specify the validation input-list file in configs module. Validation uses the )
-
-[//]: # (same batch size and device you set in configs module, but will only run one epoch.)
-
-[//]: # ()
-[//]: # (```)
-
-[//]: # (python3 eval.py -p <path to checkpoint model>)
-
-[//]: # (```)

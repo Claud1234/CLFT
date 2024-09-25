@@ -1,0 +1,4 @@
+labeled/day/rain/camera/segment-6038200663843287458_283_000_303_000_with_camera_labels_0000000042.png
+labeled/day/not_rain/camera/segment-1457696187335927618_595_027_615_027_with_camera_labels_0000000125.png
+labeled/night/rain/camera/segment-427564647064237172_183_000_203_000_0000000198.png
+labeled/night/not_rain/camera/segment-12856053589272984699_1020_000_1040_000_with_camera_labels_0000000187.png

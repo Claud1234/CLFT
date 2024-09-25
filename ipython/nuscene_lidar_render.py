@@ -208,7 +208,7 @@ class NuScenes:
         Returns a record from table in constant runtime.
         :param table_name: Table name.
         :param token: Token of the record.
-        :return: Table record. See README.md for record details for each table.
+        :return: Table record. See README.md.md for record details for each table.
         """
         assert table_name in self.table_names, "Table {} not found".format(table_name)
 
@@ -228,7 +228,7 @@ class NuScenes:
         This function queries all records for a certain field value, and returns the tokens for the matching records.
         Warning: this runs in linear time.
         :param table_name: Table name.
-        :param field: Field name. See README.md for details.
+        :param field: Field name. See README.md.md for details.
         :param query: Query to match against. Needs to type match the content of the query field.
         :return: List of tokens for the matching records.
         """

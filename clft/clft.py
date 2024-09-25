@@ -14,19 +14,20 @@ torch.manual_seed(0)
 
 class CLFT(nn.Module):
     def __init__(self,
-                 RGB_tensor_size=(3, 384, 384),
-                 XYZ_tensor_size=(3, 384, 384),
-                 patch_size=16,
-                 emb_dim=1024,
-                 resample_dim=256,
-                 read='projection',
-                 num_layers_encoder = 24,
-                 hooks=[5, 11, 17, 23],
-                 reassemble_s=[4, 8, 16, 32],
-                 transformer_dropout=0,
-                 nclasses=2,
-                 type="full",
-                 model_timm="vit_large_patch16_384"):
+                 RGB_tensor_size=None,
+                 XYZ_tensor_size=None,
+                 patch_size=None,
+                 emb_dim=None,
+                 resample_dim=None,
+                 read=None,
+                 hooks=None,
+                 reassemble_s=None,
+                 nclasses=None,
+                 type=None,
+                 model_timm=None
+                 # num_layers_encoder=24,
+                 # transformer_dropout=0,
+                 ):
         """
         Focus on Depth
         type : {"full", "depth", "segmentation"}

@@ -31,8 +31,7 @@ The experiments were carried out on TalTech HPC. For CLFT and CLFCN, we progrmme
 
 
 ## Dataset
-We used 22000 frames from Waymo Open dataset. As described in the paper, there is a need to project the LiDAR point clouds on the corresponding camera plane. Our code read the LiDAR's camera-plane-projection directly. Thus, we provided the processed dataset that used for training and validating [HERE](https://www.roboticlab.eu/claude/waymo/).
-
+- [Dataset](waymo_dataset/README.md)
 
 ## RUN 
 

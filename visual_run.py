@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 This is the script to load the all input frames to feed to model path file to compute the qualitative overlay results.
-Currently it only works for CLFT model paths and Waymo dataset. It loads the config.json file for important
-inforamtion, so you have to set the things like CLFT variants, model path, and other things in json file.
+Currently, it only works for CLFT model paths and Waymo dataset. It loads the config.json file for important
+information, so you have to set the things like CLFT variants, model path, and other things in json file.
 If you want to see how it works for single input frame, you can refer the ipython notebook in
 ipython/make_qualitative_images.ipynb
 ONLY WORK FOR WAYMO DATASET
@@ -135,14 +135,16 @@ def run(modality, backbone, config):
         model = CLFT(
             RGB_tensor_size=(3, resize, resize),
             XYZ_tensor_size=(3, resize, resize),
-            emb_dim=config['General']['emb_dim'],
-            resample_dim=config['General']['resample_dim'],
-            read=config['General']['read'],
+            patch_size=config['CLFT']['patch_size'],
+            emb_dim=config['CLFT']['emb_dim'],
+            resample_dim=config['CLFT']['resample_dim'],
+            read=config['CLFT']['read'],
+            hooks=config['CLFT']['hooks'],
+            reassemble_s=config['CLFT']['reassembles'],
             nclasses=len(config['Dataset']['classes']),
-            hooks=config['General']['hooks'],
-            model_timm=config['General']['model_timm'],
-            type=config['General']['type'],
-            patch_size=config['General']['patch_size'], )
+            type=config['CLFT']['type'],
+            model_timm=config['CLFT']['model_timm'],
+            )
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
@@ -153,13 +155,13 @@ def run(modality, backbone, config):
     else:
         sys.exit("A backbone must be specified! (clft or clfcn)")
 
-    waymo_all_list = open('/home/autolab/Data/waymo/splits_clft/all.txt', 'r')
-    waymo_all_cam = np.array(waymo_all_list.read().splitlines())
-    waymo_all_list.close()
+    data_list = open(args.path, 'r')
+    data_cam = np.array(data_list.read().splitlines())
+    data_list.close()
 
     i = 1
-    dataroot = '/home/autolab/Data/waymo/'
-    for path in waymo_all_cam:
+    dataroot = './waymo_dataset/'
+    for path in data_cam:
         cam_path = os.path.join(dataroot, path)
         anno_path = cam_path.replace('/camera', '/annotation')
         lidar_path = cam_path.replace('/camera', '/lidar').replace('.png', '.pkl')
@@ -181,8 +183,8 @@ def run(modality, backbone, config):
                 segmented_image = draw_test_segmentation_map(output_seg)
                 seg_resize = cv2.resize(segmented_image, (480, 160))
 
-                seg_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/segment')
-                overlay_path = cam_path.replace('waymo/labeled', 'clft_seg_results/base_fusion/overlay')
+                seg_path = cam_path.replace('waymo_dataset/labeled', 'output/clft_seg_results/segment')
+                overlay_path = cam_path.replace('waymo_dataset/labeled', 'output/clft_seg_results/overlay')
 
                 print(f'saving segment result {i}...')
                 cv2.imwrite(seg_path, seg_resize)
@@ -224,6 +226,8 @@ if __name__ == '__main__':
     parser.add_argument('-bb', '--backbone', required=True,
                         choices=['clfcn', 'clft'],
                         help='Use the backbone of training, clft or clfcn')
+    parser.add_argument('-p', '--path', type=str, required=True,
+                        help='The path of the text file to visualize')
     args = parser.parse_args()
 
     with open('config.json', 'r') as f:

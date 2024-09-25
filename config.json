@@ -2,29 +2,10 @@
     "General":{
         "device":"cuda:0",
         "sensor_modality": "cross_fusion",
-        "fcn": {
-            "lr_rgb":0.00006,
-            "lr_lidar":0.00006,
-            "lr_fusion":0.00007,
-            "lr_rgb_semi":0.000003,
-            "lr_lidar_semi":0.000003,
-            "lr_fusion_semi":0.00003
-        },
-        "dpt_lr":8e-5,
-        "type":"segmentation",
-        "model_timm":"vit_base_patch16_384",
-        "emb_dim":768,
-        "hooks":[2, 5, 8, 11],
-        "read":"projection",
-        "resample_dim":256,
-        "loss_depth":"ssi",
-        "loss_segmentation":"ce",
-        "lr_momentum":0.99,
         "epochs":400,
         "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
-        "patch_size":16,
         "resume_training":false,
         "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
 	    "reset_lr":false,
@@ -37,6 +18,28 @@
         "logdir_lidar": "/gpfs/mariana/smbhome/junygu/logs/lidar/",
         "logdir_fusion": "/gpfs/mariana/smbhome/junygu/logs/17-11-2013/"
     },
+    "CLFT": {
+        "dpt_lr": 8e-5,
+        "patch_size":16,
+        "emb_dim": 768,
+        "hooks": [2, 5, 8, 11],
+        "reassembles": [4, 8, 16, 32],
+        "read": "projection",
+        "resample_dim": 256,
+        "type": "segmentation",
+        "model_timm": "vit_base_patch16_384",
+        "loss_depth": "ssi",
+        "loss_segmentation": "ce",
+        "lr_momentum": 0.99
+    },
+    "CLFCN": {
+        "lr_rgb":0.00006,
+        "lr_lidar":0.00006,
+        "lr_fusion":0.00007,
+        "lr_rgb_semi":0.000003,
+        "lr_lidar_semi":0.000003,
+        "lr_fusion_semi":0.00003
+        },
     "Dataset":{
         "name": "waymo",
         "paths":{

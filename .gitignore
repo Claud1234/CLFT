@@ -16,3 +16,7 @@ result_screenshots
 .idea
 config.json
 .ipy*
+slurm*
+*.slurm
+*.out
+*.pth

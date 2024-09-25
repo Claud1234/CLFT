@@ -51,7 +51,7 @@ class OpenInput(object):
     def open_anno(self):
         anno_resize = transforms.Resize((384, 384),
                         interpolation=transforms.InterpolationMode.NEAREST)
-        anno = Image.open('./test_images/test_1_img.png')
+        anno = Image.open('./test_images/anno_human.png')
         anno = waymo_anno_class_relabel(anno)
         # annotation = Image.open(
         #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
@@ -177,28 +177,28 @@ def run(modality, backbone, config):
         model.eval()
 
         # init time logger
-        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-        repetitions = 2000
-        timings=np.zeros((repetitions,1))
+#        starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+#        repetitions = 2000
+#        timings=np.zeros((repetitions,1))
 
         #GPU-WARM-UP
-        for _ in range(2000):
-            _,_ = model(rgb, lidar, modality)
-        print('GPU warm up is done with 2000 iterations')
+#        for _ in range(2000):
+#            _,_ = model(rgb, lidar, modality)
+#        print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
-            for rep in range(repetitions):
-                starter.record()
+ #           for rep in range(repetitions):
+ #               starter.record()
                 _, output_seg = model(rgb, lidar, modality)
-                ender.record()
+ #               ender.record()
                 # wait for GPU sync
-                torch.cuda.synchronize()
-                curr_time = starter.elapsed_time(ender)
-                timings[rep] = curr_time
+ #               torch.cuda.synchronize()
+ #               curr_time = starter.elapsed_time(ender)
+ #               timings[rep] = curr_time
 
-        mean_syn = np.sum(timings) / repetitions
-        std_syn = np.std(timings)
-        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
+#        mean_syn = np.sum(timings) / repetitions
+#        std_syn = np.std(timings)
+#        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
 #        exe_time = time.time() - start
 #        print(f'Executed in {exe_time*1000} miliseconds')
         segmented_image = draw_test_segmentation_map(output_seg)
@@ -210,7 +210,7 @@ def run(modality, backbone, config):
 
         seg_resize = cv2.resize(segmented_image, (480, 160))
         #result = image_overlay(rgb, segmented_image)
-        #cv2.imwrite('./dpt_seg_visual.png',seg_resize)
+        cv2.imwrite('./dpt_seg_visual.png',seg_resize)
 
     else:
         sys.exit("A backbone must be specified! (dpt or fcn)")

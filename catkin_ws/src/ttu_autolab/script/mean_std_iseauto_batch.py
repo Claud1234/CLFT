@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
-Script to compute mean and std of one iseauto lidar .bin data.
+Script to compute mean and std of one tools lidar .bin data.
 Need bash commands to process the batch data.
 
 Created on Oct 21st, 2021

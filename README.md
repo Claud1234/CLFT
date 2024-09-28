@@ -32,6 +32,9 @@ The experiments were carried out on TalTech HPC. For CLFT and CLFCN, we progrmme
 ## Dataset
 - [Dataset](waymo_dataset/README.md)
 
+## Model
+- [Model](model_path/README.md)
+
 ## Visualization 
 We provide the 'visual_run.py' to load the model path and input data, then render out the segmentation and ovelay results as PNG images. 
 
@@ -44,7 +47,9 @@ Specify three args for this script. \
 ```
 python visual_run.py -m cross_fusion -bb clft -p ./waymo_dataset/visual_run_demo.txt
 ```
-The 'visual_run_demo.txt' is existed in 'waymo_dataset' folder, it contains four samples scattered to four weather subset, light-dry, light-wet, night-dry, and night-wet. But please note you need to have our waymo dataset downloaded and placed in the 'waymo_dataset' folder. The segmentation and overlay results of these four samples will be saved in 'output' folder and followed the same path tree specified in this repo. We provide the PNG results of four smaples in 'output' folder as well.
+The 'visual_run_demo.txt' is existed in 'waymo_dataset' folder, it contains four samples scattered to four weather subsets, light-dry, light-wet, night-dry, and night-wet. But please note you need to have our waymo dataset downloaded and placed in the 'waymo_dataset' folder. The segmentation and overlay results of these four samples will be saved in 'output' folder and followed the same path tree specified in this repo. We provide the PNG results of four samples in 'output' folder as well.
+
+Specify the model path in the config.json ['General']['model_path']
 
 ### FCN
 

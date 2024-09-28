@@ -4,6 +4,8 @@
 Dataloader python script
 
 Created on May 13rd, 2021
+
+TODO: get the iseauto dataset dataloder part done.
 """
 import os
 import sys
@@ -18,6 +20,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
 from utils.helpers import waymo_anno_class_relabel
+from utils.helpers import waymo_anno_class_relabel_1
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -73,39 +76,13 @@ def lidar_dilation(X, Y, Z):
 
 
 class Dataset(object):
-    def __init__(self, config, data_category, split=None,):
+    def __init__(self, config, split=None, path=None):
         np.random.seed(789)
         self.config = config
 
-        path_rgb = os.path.join(config['Dataset']['paths']['path_dataset'],
-                                data_category,
-                                config['Dataset']['paths']['path_rgb'],
-                                '*'+'.png')
-        path_lidar = os.path.join(config['Dataset']['paths']['path_dataset'],
-                                  data_category,
-                                  config['Dataset']['paths']['path_lidar'],
-                                  '*'+'.pkl')
-        path_anno = os.path.join(config['Dataset']['paths']['path_dataset'],
-                                 data_category,
-                                 config['Dataset']['paths']['path_anno'],
-                                 '*'+'.png')
-
-        self.paths_rgb = glob(path_rgb)
-        self.paths_lidar = glob(path_lidar)
-        self.paths_anno = glob(path_anno)
-
-        assert (split in ['train', 'test', 'val']), "Invalid split!"
-        assert (len(self.paths_rgb) == len(self.paths_lidar)), \
-            "Different amount of rgb and lidar inputs"
-        assert (len(self.paths_rgb) == len(self.paths_anno)), \
-            "Different amount og rgb adn anno inputs"
-        assert (config['Dataset']['splits']['split_train'] +
-                config['Dataset']['splits']['split_test'] +
-                config['Dataset']['splits']['split_val'] == 1), \
-            "Invalid train/test/eval splits (sum must be equal to 1)"
-
-        self.paths_rgb, self.paths_lidar, self.paths_anno = \
-            get_splitted_dataset(config, split, data_category, self.paths_rgb)
+        list_examples_file = open(path, 'r')
+        self.list_examples_cam = np.array(list_examples_file.read().splitlines())
+        list_examples_file.close()
 
         if split == 'train':  # only augment for training.
             self.p_flip = config['Dataset']['transforms']['p_flip']
@@ -117,65 +94,58 @@ class Dataset(object):
             self.p_rot = 0
 
         self.img_size = config['Dataset']['transforms']['resize']
-        self.rgb_normalize = transforms.Compose([
-                        #transforms.RandomCrop(),
-                        transforms.Resize((self.img_size, self.img_size),
-                        interpolation=transforms.InterpolationMode.BILINEAR),
-                        transforms.ToTensor(),
-                        transforms.Normalize(
-                            mean=config['Dataset']['transforms']['image_mean'],
-                            std=config['Dataset']['transforms']['image_mean'])])
+        self.rgb_normalize = transforms.Compose([transforms.Resize((self.img_size, self.img_size),
+                                                interpolation=transforms.InterpolationMode.BILINEAR),
+                                                transforms.ToTensor(),
+                                                transforms.Normalize(
+                                                mean=config['Dataset']['transforms']['image_mean'],
+                                                std=config['Dataset']['transforms']['image_mean'])])
 
         self.anno_resize = transforms.Resize((self.img_size, self.img_size),
-                        interpolation=transforms.InterpolationMode.NEAREST)
+                                             interpolation=transforms.InterpolationMode.NEAREST)
 
     def __len__(self):
-        return len(self.paths_rgb)
+        return len(self.list_examples_cam)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-
-        rgb_name = self.paths_rgb[idx].split('/')[-1].split('.')[0]
-        anno_name = self.paths_anno[idx].split('/')[-1].split('.')[0]
-        lidar_name = self.paths_lidar[idx].split('/')[-1].split('.')[0]
-        assert (rgb_name == anno_name), "rgb and anno input not matching"
-        assert (rgb_name == lidar_name), "rgb and lidar input not matching"
+        dataroot = './waymo_dataset/'
 
         if self.config['Dataset']['name'] == 'waymo':
+            cam_path = os.path.join(dataroot, self.list_examples_cam[idx])
+            anno_path = cam_path.replace('/camera', '/annotation')
+            lidar_path = cam_path.replace('/camera', '/lidar').replace('.png', '.pkl')
+
             # waymo rgb and anno is in 480x320, lidar is in 1920x1280
-            rgb = Image.open(self.paths_rgb[idx]).convert('RGB')
+            rgb = Image.open(cam_path).convert('RGB')
 
-            anno = waymo_anno_class_relabel(
-                Image.open(self.paths_anno[idx]))  # Tensor [1, H, W]
-
-            points_set, camera_coord = open_lidar(
-                self.paths_lidar[idx],
-                w_ratio=4,
-                h_ratio=4,
-                lidar_mean=self.config['Dataset']['transforms'][
-                    'lidar_mean_waymo'],
-                lidar_std=self.config['Dataset']['transforms'][
-                    'lidar_mean_waymo'])
+            # Here there are two class relabel functions, go to /utils/helper.py for details.
+            anno = waymo_anno_class_relabel_1(Image.open(anno_path))  # Tensor [1, H, W]
+            points_set, camera_coord = open_lidar(lidar_path, w_ratio=4, h_ratio=4,
+                                                  lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
+                                                  lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])
 
         elif self.config['Dataset']['name'] == 'iseauto':
-            rgb = Image.open(self.paths_rgb[idx]).resize((480, 320),
-                                                         Image.BILINEAR)
-            anno = Image.open(self.paths_anno[idx]).resize((480, 320),
-                                                         Image.BILINEAR)
-            anno = torch.from_numpy(np.array(anno)).unsqueeze(0).long()
+            cam_path = os.path.join(dataroot, self.list_examples_cam[idx])
+            anno_path = cam_path.replace('/rgb', '/annotation_gray')
+            lidar_path = cam_path.replace('/rgb', '/pkl').replace('.png', '.pkl')
 
-            points_set, camera_coord = open_lidar(
-                self.paths_lidar[idx],
-                w_ratio=8.84,
-                h_ratio=8.825,
-                lidar_mean=self.config['Dataset']['transforms'][
-                    'lidar_mean_iseauto'],
-                lidar_std=self.config['Dataset']['transforms'][
-                    'lidar_mean_iseauto'])
+            rgb = Image.open(cam_path).resize((480, 320), Image.BILINEAR)
+            anno = Image.open(anno_path).resize((480, 320), Image.BILINEAR)
+            anno = torch.from_numpy(np.array(anno)).unsqueeze(0).long()
+            points_set, camera_coord = open_lidar(lidar_path, w_ratio=8.84, h_ratio=8.825,
+                                                  lidar_mean=self.config['Dataset']['transforms']['lidar_mean_iseauto'],
+                                                  lidar_std=self.config['Dataset']['transforms']['lidar_mean_iseauto'])
 
         else:
-            sys.exit("[Dataset][name] must be specified waymo or iseauto")
+            sys.exit("['Dataset']['name'] must be specified waymo or iseauto")
+
+        rgb_name = cam_path.split('/')[-1].split('.')[0]
+        anno_name = anno_path.split('/')[-1].split('.')[0]
+        lidar_name = lidar_path.split('/')[-1].split('.')[0]
+        assert (rgb_name == anno_name), "rgb and anno input not matching"
+        assert (rgb_name == lidar_name), "rgb and lidar input not matching"
 
         # Crop the top part 1/2 of the input data
         rgb_orig = rgb.copy()

@@ -7,8 +7,8 @@ If you want to see how it works for single input frame, you can refer the ipytho
 ipython/make_qualitative_images.ipynb
 ONLY WORK FOR WAYMO DATASET
 
-updated on 16,06.2024.
-CLFCN is also working now. Remember you still need to modify this script to set the resulting saving path.
+updated on 29.09.2024.
+CLFCN is also working now. Remember to specify the clfcn model path in config.json
 """
 import os
 import cv2
@@ -27,7 +27,7 @@ from utils.helpers import waymo_anno_class_relabel
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
-from iseauto.dataset import lidar_dilation
+from tools.dataset import lidar_dilation
 
 from utils.helpers import draw_test_segmentation_map, image_overlay
 
@@ -123,8 +123,7 @@ def run(modality, backbone, config):
     if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        # TODO: add the clfcn-related configs in config.json
-        checkpoint = torch.load('./model_path/clfcn/checkpoint_289_fusion.pth', map_location=device)
+        checkpoint = torch.load(config['General']['model_path'], map_location=device)
 
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
@@ -191,6 +190,7 @@ def run(modality, backbone, config):
 
                 rgb_cv2 = cv2.imread(cam_path)
                 rgb_cv2_top = rgb_cv2[160:320, 0:480]
+
                 overlay = image_overlay(rgb_cv2_top, seg_resize)
                 print(f'saving overlay result {i}...')
                 cv2.imwrite(overlay_path, overlay)
@@ -201,8 +201,8 @@ def run(modality, backbone, config):
                 output_seg = output_seg[modality]
                 segmented_image = draw_test_segmentation_map(output_seg)
 
-                seg_path = cam_path.replace('waymo/labeled', 'clfcn_seg_results/clfcn_fusion/segment')
-                overlay_path = cam_path.replace('waymo/labeled', 'clfcn_seg_results/clfcn_fusion/overlay')
+                seg_path = cam_path.replace('waymo_dataset/labeled', 'output/clfcn_seg_results/segment')
+                overlay_path = cam_path.replace('waymo_dataset/labeled', 'output/clfcn_seg_results/overlay')
 
                 print(f'saving segment result {i}...')
                 cv2.imwrite(seg_path, segmented_image)

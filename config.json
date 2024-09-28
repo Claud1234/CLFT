@@ -1,9 +1,8 @@
 {
     "General":{
         "device":"cuda:0",
-        "sensor_modality": "cross_fusion",
         "epochs":400,
-        "batch_size":24,
+        "batch_size":2,
         "path_predicted_images":"output",
         "seed":0,
         "resume_training":false,
@@ -11,7 +10,7 @@
 	    "reset_lr":false,
         "early_stop_patience": 50,
         "save_epoch": 20,
-        "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
+        "model_path":"./model_path/clfcn/checkpoint_289_fusion.pth"
     },
     "Log": {
         "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
@@ -19,7 +18,7 @@
         "logdir_fusion": "/gpfs/mariana/smbhome/junygu/logs/17-11-2013/"
     },
     "CLFT": {
-        "dpt_lr": 8e-5,
+        "clft_lr": 8e-5,
         "patch_size":16,
         "emb_dim": 768,
         "hooks": [2, 5, 8, 11],
@@ -33,22 +32,10 @@
         "lr_momentum": 0.99
     },
     "CLFCN": {
-        "lr_rgb":0.00006,
-        "lr_lidar":0.00006,
-        "lr_fusion":0.00007,
-        "lr_rgb_semi":0.000003,
-        "lr_lidar_semi":0.000003,
-        "lr_fusion_semi":0.00003
+        "clfcn_lr":0.00006
         },
     "Dataset":{
         "name": "waymo",
-        "paths":{
-            "path_dataset":"/gpfs/mariana/home/junygu/claude/dataset/waymo/labeled",
-            "list_datasets":["day_fair", "day_rain", "night_fair", "night_rain"],
-            "path_rgb":"rgb",
-            "path_anno":"annotation_gray",
-            "path_lidar":"pkl"
-        },
         "splits":{
             "split_train":0.6,
             "split_val":0.2,
@@ -73,16 +60,20 @@
                 "color": 0
             },
             "1": {
-                "name": "car",
+                "name": "cyclist",
                 "color": 1
             },
             "2": {
-                "name": "person",
+                "name": "pedestrian",
                 "color": 2
             },
             "3": {
-                "name": "ignore",
+                "name": "sign",
                 "color": 3
+            },
+            "4": {
+                "name": "ignore",
+                "color": 4
             }
         }
     }

@@ -19,7 +19,7 @@ from utils.helpers import waymo_anno_class_relabel
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
-from iseauto.dataset import lidar_dilation
+from tools.dataset import lidar_dilation
 
 
 class OpenInput(object):

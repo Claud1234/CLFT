@@ -8,56 +8,39 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data import ConcatDataset
 
-from iseauto.trainer import Trainer
-from iseauto.dataset import Dataset
+from tools.trainer import Trainer
+from tools.dataset import Dataset
 
 
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+parser = argparse.ArgumentParser(description='CLFT and CLFCN Training')
 parser.add_argument('-bb', '--backbone', required=True,
                     choices=['clfcn', 'clft'],
                     help='Use the backbone of training, clft or clfcn')
-# parser.add_argument('-reset-lr', dest='reset_lr', action='store_true',
-#                     help='Reset LR to initial value defined in configs')
-# parser.add_argument('-p', '--model_path', dest='model_path',
-#                     help='path of checkpoint for training resuming')
-# parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
-#                     help='select to evaluate waymo or iseauto dataset')
-# parser.add_argument('-m', '--model', dest='model', required=True,
-#                     choices=['rgb', 'lidar', 'fusion'],
-#                     help='Define training modes. (rgb, lidar or fusion)')
+parser.add_argument('-m', '--mode', type=str, required=True,
+                    choices=['rgb', 'lidar', 'cross_fusion'],
+                    help='Output mode (lidar, rgb or cross_fusion)')
 args = parser.parse_args()
 np.random.seed(config['General']['seed'])
 trainer = Trainer(config, args)
 
-
-list_datasets = config['Dataset']['paths']['list_datasets']
-modality = config['General']['sensor_modality']
-
-datasets_train = []
-for data_category in list_datasets:
-    datasets_train.append(Dataset(config, data_category, 'train'))
-train_data = ConcatDataset(datasets_train)
+train_data = Dataset(config, 'train', './waymo_dataset/splits_clft/train_all.txt')
 train_dataloader = DataLoader(train_data,
                               batch_size=config['General']['batch_size'],
                               shuffle=True,
                               pin_memory=True,
                               drop_last=True)
-#print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-datasets_valid = []
-for data_category in list_datasets:
-    datasets_valid.append(Dataset(config, data_category, 'val'))
-valid_data = ConcatDataset(datasets_valid)
+
+valid_data = Dataset(config, 'val', './waymo_dataset/splits_clft/early_stop_valid.txt')
 valid_dataloader = DataLoader(valid_data,
                               batch_size=config['General']['batch_size'],
                               shuffle=True,
                               pin_memory=True,
                               drop_last=True)
-#print('**************************************')
 
-trainer.train_dpt(train_dataloader, valid_dataloader, modal=modality)
+trainer.train_clft(train_dataloader, valid_dataloader, modal=args.mode)
 
 
 

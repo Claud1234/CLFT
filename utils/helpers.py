@@ -50,7 +50,7 @@ def waymo_anno_class_relabel(annotation):
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
                             4->cyclist, 5->background
     :return annotation: 0->background+sign, 1->vehicle
-                            2->pedestrian+cyclist, 3->ingore
+                            2->pedestrian+cyclist, 3->ignore
     """
     annotation = np.array(annotation)
 
@@ -63,6 +63,29 @@ def waymo_anno_class_relabel(annotation):
     annotation[mask_background] = 0
     annotation[mask_cyclist] = 2
     annotation[mask_ignore] = 3
+
+    return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
+
+
+def waymo_anno_class_relabel_1(annotation):
+    """
+    Reassign the indices of the objects in annotation(PointCloud);
+    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
+                            4->cyclist, 5->background
+    :return annotation: 0->background, 1-> cyclist 2->pedestrain, 3->sign,
+                            4->ignore+vehicle
+    """
+    annotation = np.array(annotation)
+
+    mask_ignore = annotation == 0
+    mask_vehicle = annotation == 1
+    mask_cyclist = annotation == 4
+    mask_background = annotation == 5
+
+    annotation[mask_background] = 0
+    annotation[mask_cyclist] = 1
+    annotation[mask_ignore] = 4
+    annotation[mask_vehicle] = 4
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 
@@ -136,9 +159,9 @@ def save_model_dict(config, epoch, model, optimizer, save_check=False):
 def adjust_learning_rate(config, optimizer, epoch):
     """Decay the learning rate based on schedule"""
     epoch_max = config['General']['epochs']
-    momentum = config['General']['lr_momentum']
+    momentum = config['CLFT']['lr_momentum']
     # lr = config['General']['dpt_lr'] * (1-epoch/epoch_max)**0.9
-    lr = config['General']['dpt_lr'] * (momentum ** epoch)
+    lr = config['CLFT']['clft_lr'] * (momentum ** epoch)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 

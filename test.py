@@ -7,8 +7,8 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 
-from iseauto.tester import Tester
-from iseauto.dataset import Dataset
+from tools.tester import Tester
+from tools.dataset import Dataset
 
 
 with open('config.json', 'r') as f:
@@ -23,7 +23,7 @@ parser.add_argument('-bb', '--backbone', required=True,
 # parser.add_argument('-p', '--model_path', dest='model_path',
 #                     help='path of checkpoint for training resuming')
 # parser.add_argument('-i', '--dataset', dest='dataset', type=str, required=True,
-#                     help='select to evaluate waymo or iseauto dataset')
+#                     help='select to evaluate waymo or tools dataset')
 # parser.add_argument('-m', '--model', dest='model', required=True,
 #                     choices=['rgb', 'lidar', 'fusion'],
 #                     help='Define training modes. (rgb, lidar or fusion)')

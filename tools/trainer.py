@@ -19,78 +19,52 @@ from utils.helpers import adjust_learning_rate
 writer = SummaryWriter()
 
 
-def get_optimizer_dpt(config, net):
-    for name, _ in net.named_modules():
-        print(name)
-    names = (set([name.split('.')[0] for name, _ in net.named_modules()]) -
-             {'', 'transformer_encoders'})
-
-    params_backbone = net.transformer_encoders.parameters()
-    params_scratch = list()
-    for name in names:
-        params_scratch += list(eval("net." + name).parameters())
-
-    optimizer_dpt_backbone = torch.optim.Adam(params_backbone,
-                                              lr=config['General']['dpt']['lr_backbone'])
-    optimizer_dpt_scratch = torch.optim.Adam(params_scratch,
-                                             lr=config['General']['dpt']['lr_scratch'])
-
-    return optimizer_dpt_backbone, optimizer_dpt_scratch
-
-
 class Trainer(object):
     def __init__(self, config, args):
         super().__init__()
         self.config = config
         self.args = args
         self.finished_epochs = 0
-        self.type = self.config['General']['type']
-
         self.device = torch.device(self.config['General']['device']
                                    if torch.cuda.is_available() else "cpu")
         print("device: %s" % self.device)
 
-        if args.backbone == 'fcn':
+        if args.backbone == 'clfcn':
             self.model = FusionNet()
             print(f'Using backbone {args.backbone}')
-            self.optimizer_fcn = torch.optim.Adam(self.model.parameters(),
-                                                  lr=config['General']['fcn'][
-                                                      f"lr_{config['General']['sensor_modality']}"])
-            self.scheduler_fcn = ReduceLROnPlateau(self.optimizer_fcn)
+            self.optimizer_clfcn = torch.optim.Adam(self.model.parameters(), lr=config['CLFCN']['clfcn_lr'])
+            self.scheduler_clfcn = ReduceLROnPlateau(self.optimizer_clfcn)
 
-        elif args.backbone == 'dpt':
+        elif args.backbone == 'clft':
             resize = config['Dataset']['transforms']['resize']
             self.model = CLFT(
                 RGB_tensor_size=(3, resize, resize),
                 XYZ_tensor_size=(3, resize, resize),
-                emb_dim=config['General']['emb_dim'],
-                resample_dim=config['General']['resample_dim'],
-                read=config['General']['read'],
+                patch_size=config['CLFT']['patch_size'],
+                emb_dim=config['CLFT']['emb_dim'],
+                resample_dim=config['CLFT']['resample_dim'],
+                read=config['CLFT']['read'],
+                hooks=config['CLFT']['hooks'],
+                reassemble_s=config['CLFT']['reassembles'],
                 nclasses=len(config['Dataset']['classes']),
-                hooks=config['General']['hooks'],
-                model_timm=config['General']['model_timm'],
-                type=self.type,
-                patch_size=config['General']['patch_size'], )
+                type=config['CLFT']['type'],
+                model_timm=config['CLFT']['model_timm'],
+            )
             print(f'Using backbone {args.backbone}')
-            self.optimizer_dpt = torch.optim.Adam(self.model.parameters(),
-                                                  lr=config['General']['dpt_lr'])
-        # self.optimizer_dpt_backbone, self.optimizer_dpt_scratch = \
-        # 	get_optimizer_dpt(config, self.model)
-        # self.scheduler_backbone = ReduceLROnPlateau(self.optimizer_dpt_backbone)
-        # self.scheduler_scratch = ReduceLROnPlateau(self.optimizer_dpt_scratch)
+            self.optimizer_clft = torch.optim.Adam(self.model.parameters(), lr=config['CLFT']['clft_lr'])
 
         else:
-            sys.exit("A backbone must be specified! (dpt or fcn)")
+            sys.exit("A backbone must be specified! (clft or clfcn)")
 
         self.model.to(self.device)
 
         self.nclasses = len(config['Dataset']['classes'])
         weight_loss = torch.Tensor(self.nclasses).fill_(0)
         # define weight of different classes, 0-background, 1-car, 2-people.
-        # weight_loss[3] = 0
+        weight_loss[3] = 10
         weight_loss[0] = 1
         weight_loss[1] = 4
-        weight_loss[2] = 10
+        weight_loss[2] = 4
         self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
         if self.config['General']['resume_training'] is True:
@@ -103,25 +77,22 @@ class Trainer(object):
                 self.finished_epochs = 0
             else:
                 self.finished_epochs = checkpoint['epoch']
-                print(
-                    f"Finished epochs in previous training: {self.finished_epochs}")
+                print( f"Finished epochs in previous training: {self.finished_epochs}")
 
             if self.config['General']['epochs'] <= self.finished_epochs:
-                print(
-                    'Present epochs amount is smaller than finished epochs!!!')
-                print(
-                    f"Please setting the epochs bigger than {self.finished_epochs}")
+                print('Present epochs amount is smaller than finished epochs!!!')
+                print(f"Please setting the epochs bigger than {self.finished_epochs}")
                 sys.exit()
             else:
                 print('Loading trained model weights...')
                 self.model.load_state_dict(checkpoint['model_state_dict'])
                 print('Loading trained optimizer...')
-                self.optimizer_dpt.load_state_dict(checkpoint['optimizer_state_dict'])
+                self.optimizer_clft.load_state_dict(checkpoint['optimizer_state_dict'])
 
         else:
             print('Training from the beginning')
 
-    def train_dpt(self, train_dataloader, valid_dataloader, modal):
+    def train_clft(self, train_dataloader, valid_dataloader, modal):
         """
         The training of one epoch
         """
@@ -130,7 +101,7 @@ class Trainer(object):
         early_stopping = EarlyStopping(self.config)
         self.model.train()
         for epoch in range(self.finished_epochs, epochs):
-            lr = adjust_learning_rate(self.config, self.optimizer_dpt, epoch)
+            lr = adjust_learning_rate(self.config, self.optimizer_clft, epoch)
             print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
             print('Training...')
             train_loss = 0.0
@@ -142,7 +113,7 @@ class Trainer(object):
                                                    non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                self.optimizer_dpt.zero_grad()
+                self.optimizer_clft.zero_grad()
 
                 _, output_seg = self.model(batch['rgb'], batch['lidar'], modality)
 
@@ -167,7 +138,7 @@ class Trainer(object):
 
                 train_loss += loss.item()
                 loss.backward()
-                self.optimizer_dpt.step()
+                self.optimizer_clft.step()
                 progress_bar.set_description(f'DPT train loss:{loss:.4f}')
 
             # The IoU of one epoch
@@ -179,12 +150,9 @@ class Trainer(object):
                 f'Training human IoU for Epoch: {train_epoch_IoU[1]:.4f}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i + 1)
-            print(
-                f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
+            print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
 
-            valid_epoch_loss, valid_epoch_IoU = self.validate_dpt(
-                valid_dataloader,
-                modality)
+            valid_epoch_loss, valid_epoch_IoU = self.validate_clft(valid_dataloader, modality)
 
             # self.scheduler_backbone.step(valid_epoch_loss)
             # self.scheduler_scratch.step(valid_epoch_loss)
@@ -203,18 +171,18 @@ class Trainer(object):
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
             early_stopping(early_stop_index, epoch, self.model,
-                           self.optimizer_dpt)
+                           self.optimizer_clft)
             if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and
                     epoch > 0):
                 print('Saving model for every 10 epochs...')
                 save_model_dict(self.config, epoch, self.model,
-                                self.optimizer_dpt, True)
+                                self.optimizer_clft, True)
                 print('Saving Model Complete')
             if early_stopping.early_stop_trigger is True:
                 break
         print('Training Complete')
 
-    def validate_dpt(self, valid_dataloader, modal):
+    def validate_clft(self, valid_dataloader, modal):
         """
             The validation of one epoch
         """

@@ -62,10 +62,10 @@ class Trainer(object):
         self.nclasses = len(config['Dataset']['classes'])
         weight_loss = torch.Tensor(self.nclasses).fill_(0)
         # define weight of different classes, 0-background, 1-car, 2-people.
-        weight_loss[3] = 10
+        # weight_loss[3] = 10
         weight_loss[0] = 1
         weight_loss[1] = 4
-        weight_loss[2] = 4
+        weight_loss[2] = 10
         self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
         if self.config['General']['resume_training'] is True:
@@ -120,12 +120,9 @@ class Trainer(object):
 
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
-                # print(output_seg)
-                # print(output_seg.size())
                 anno = batch['anno']
-                # print(1 in anno)
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap_1(self.nclasses, output_seg, anno)
-                # print(batch_label)
+
+                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
@@ -139,44 +136,33 @@ class Trainer(object):
                 train_loss += loss.item()
                 loss.backward()
                 self.optimizer_clft.step()
-                progress_bar.set_description(f'DPT train loss:{loss:.4f}')
+                progress_bar.set_description(f'CLFT train loss:{loss:.4f}')
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print(
-                f'Training vehicles IoU for Epoch:'
-                f' {train_epoch_IoU[0]:.4f}')
-            print(
-                f'Training human IoU for Epoch: {train_epoch_IoU[1]:.4f}')
+            print(f'Training vehicles IoU for Epoch: {train_epoch_IoU[0]:.4f}')
+            print(f'Training human IoU for Epoch: {train_epoch_IoU[1]:.4f}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i + 1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
 
             valid_epoch_loss, valid_epoch_IoU = self.validate_clft(valid_dataloader, modality)
 
-            # self.scheduler_backbone.step(valid_epoch_loss)
-            # self.scheduler_scratch.step(valid_epoch_loss)
-
             # Plot the train and validation loss in Tensorboard
             writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
             # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU',
-                               {'train': train_epoch_IoU[0],
-                                'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU',
-                               {'train': train_epoch_IoU[1],
-                                'valid': valid_epoch_IoU[1]}, epoch)
+            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
+                                               'valid': valid_epoch_IoU[0]}, epoch)
+            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
+                                             'valid': valid_epoch_IoU[1]}, epoch)
             writer.close()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
-            early_stopping(early_stop_index, epoch, self.model,
-                           self.optimizer_clft)
-            if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and
-                    epoch > 0):
+            early_stopping(early_stop_index, epoch, modality, self.model, self.optimizer_clft)
+            if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and epoch > 0):
                 print('Saving model for every 10 epochs...')
-                save_model_dict(self.config, epoch, self.model,
-                                self.optimizer_clft, True)
+                save_model_dict(self.config, epoch, modality, self.model, self.optimizer_clft, True)
                 print('Saving Model Complete')
             if early_stopping.early_stop_trigger is True:
                 break
@@ -198,13 +184,12 @@ class Trainer(object):
                                                    non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'],
-                                           modal)
+                _, output_seg = self.model(batch['rgb'], batch['lidar'], modal)
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap_1(self.nclasses, output_seg, anno)
+                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -213,20 +198,14 @@ class Trainer(object):
 
                 loss = self.criterion(output_seg, batch['anno'])
                 valid_loss += loss.item()
-                progress_bar.set_description(f'valid fusion loss:'
-                                             f'{loss:.4f}')
+                progress_bar.set_description(f'valid fusion loss: {loss:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(
-            f'Validation vehicles IoU for Epoch:'
-            f' {valid_epoch_IoU[0]:.4f}')
-        print(
-            f'Validation human IoU for Epoch:'
-            f' {valid_epoch_IoU[1]:.4f}')
+        print(f'Validation vehicles IoU for Epoch: {valid_epoch_IoU[0]:.4f}')
+        print(f'Validation human IoU for Epoch: {valid_epoch_IoU[1]:.4f}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i + 1)
-        print(f'Average Validation Loss for Epoch: '
-              f'{valid_epoch_loss:.4f}')
+        print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')
 
         return valid_epoch_loss, valid_epoch_IoU
 

@@ -121,7 +121,7 @@ class Dataset(object):
             rgb = Image.open(cam_path).convert('RGB')
 
             # Here there are two class relabel functions, go to /utils/helper.py for details.
-            anno = waymo_anno_class_relabel_1(Image.open(anno_path))  # Tensor [1, H, W]
+            anno = waymo_anno_class_relabel(Image.open(anno_path))  # Tensor [1, H, W]
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=4, h_ratio=4,
                                                   lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
                                                   lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])

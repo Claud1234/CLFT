@@ -1,7 +1,0 @@
-opencv==
-pytorch==1.13.1+cu117
-torchvision==0.14.1+cu117
-torchaudio==0.13.1
-timm==0.9.8
-einops==0.7.0
-

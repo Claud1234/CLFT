@@ -11,9 +11,9 @@ https://github.com/user-attachments/assets/cd51585e-2f66-4ff5-bb5b-689d3fb7d4c0
 
 
 # News
-- [30-09-2024] The train.py and test.py scritps are avialble. The models trained for paper's experiments are avialble for downloading. 
-- [25-09-2024] The author fianlly finished his PhD thesis work and start to maintain the repo. The visual_run.py script is available. The waymo dataset used for the experimetns in paper is available for downloading. 
-- [16/04/2024] Please note that this repository is still under maintance. Author is focusing on his PhD thsis at the moment and will chean up code and optimize README gradually. You can write to claude.gujunyi@gmail.com for details. 
+- [30-09-2024] The train.py and test.py scripts are available. The models trained for paper's experiments are available for downloading. 
+- [25-09-2024] The author finally finished his PhD thesis work and start to maintain the repo. The visual_run.py script is available. The waymo dataset used for the experiments in paper is available for downloading. 
+- [16/04/2024] Please note that this repository is still under maintenance. Author is focusing on his PhD thesis at the moment and will clean up code and optimize README gradually. You can write to claude.gujunyi@gmail.com for details. 
 
 
 
@@ -54,16 +54,16 @@ We recommend to implement this environment if you are using our models.
 - [Model](model_path/README.md)
 
 ## Visualization 
-We provide the [visual_run.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/visual_run.py) to load the model path and input data, then render out the segmentation and ovelay results as PNG images. 
+We provide the [visual_run.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/visual_run.py) to load the model path and input data, then render out the segmentation and overlay results as PNG images. 
 
 Specify three args for this script. \
--m -> modalitity. Choices: rgb, lidar, cross_fusion \
--bb -> backbonw. Choices: clfcn, clft\
+-m -> modality. Choices: rgb, lidar, cross_fusion \
+-bb -> backbone. Choices: clfcn, clft\
 -p -> the txt file contains the paths of input data.
 
 The [waymo_dataset/visual_run_demo.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/visual_run_demo.txt) contains four samples scattered to four weather subsets, light-dry, light-wet, night-dry, and night-wet. But please note you need to have our waymo dataset downloaded and placed in the 'waymo_dataset' folder. The segmentation and overlay results of these four samples will be saved in 'output' folder and followed the same folder tree specified in this repo. We provide the PNG results of four samples in 'output' folder as well.
 
-Please note this script is for making visualization results in big batch. If you only want to try for one image, we recommend to take a look of the [ipython/make_qualitative_images .ipynb](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/ipython/make_qualitative_images%20.ipynb), it help to better understand the code. 
+Please note this script is for making visualization results in big batch. If you only want to try for one image, we recommend to take a look of the [ipython/make_qualitative_images .ipynb](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/ipython/make_qualitative_images%20.ipynb), it helps to better understand the code. 
 
 ### CLFT
 ```
@@ -83,10 +83,10 @@ Specify the corresponding CLFCN model path in the [config.json 'General''model_p
 The [train.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/train.py) script is for training the CLFT and CLFCN models. 
 
 Specify two args for this script. \
--m -> modalitity. Choices: rgb, lidar, cross_fusion \
--bb -> backbonw. Choices: clfcn, clft\
+-m -> modality. Choices: rgb, lidar, cross_fusion \
+-bb -> backbone. Choices: clfcn, clft\
 
-The [waymo_dataset/splits_clft/train_all.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/train_all.txt) and [waymo_dataset/splits_clft/early_stop_valid.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/early_stop_valid.txt) are specifed in the script. We use 60% of the dataset for training, and 20% for validating. 
+The [waymo_dataset/splits_clft/train_all.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/train_all.txt) and [waymo_dataset/splits_clft/early_stop_valid.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/early_stop_valid.txt) are specified in the script. We use 60% of the dataset for training, and 20% for validating. 
 
 TODO: clean and test the resume training function. 
  
@@ -110,8 +110,8 @@ TODO
 The [test.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/test.py) script is for testing the CLFT and CLFCN models. 
 
 Specify three args for this script. \
--m -> modalitity. Choices: rgb, lidar, cross_fusion \
--bb -> backbonw. Choices: clfcn, clft\
+-m -> modality. Choices: rgb, lidar, cross_fusion \
+-bb -> backbone. Choices: clfcn, clft\
 -p -> the txt file contains the paths of input data.
 
 The script compute the IoU, recall, and precision for each class.
@@ -124,7 +124,7 @@ Specify the corresponding CLFT model path in the [config.json 'General''model_pa
 
 There is need to change the [config.json](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L20) as well, based on the CLFT variants, same as training. 
 
-The input path txt files are availble in [waymo_dataset/splits_clft](https://github.com/Claud1234/CLFT/tree/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft), the rest 20% of dataset were used for test. Four weather subsets are classfied in different text files. 
+The input path txt files are available in [waymo_dataset/splits_clft](https://github.com/Claud1234/CLFT/tree/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft), the rest 20% of dataset were used for test. Four weather subsets are classified in different text files. 
 
 
 ### CLFCN

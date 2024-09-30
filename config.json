@@ -1,8 +1,8 @@
 {
     "General":{
-        "device":"cpu",
+        "device":"cuda:0",
         "epochs":400,
-        "batch_size":2,
+        "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
         "resume_training":false,
@@ -36,11 +36,6 @@
         },
     "Dataset":{
         "name": "waymo",
-        "splits":{
-            "split_train":0.6,
-            "split_val":0.2,
-            "split_test":0.2
-        },
         "transforms":{
             "resize":384,
             "random_rotate_range":20,

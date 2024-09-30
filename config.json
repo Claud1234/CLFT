@@ -1,6 +1,6 @@
 {
     "General":{
-        "device":"cuda:0",
+        "device":"cpu",
         "epochs":400,
         "batch_size":2,
         "path_predicted_images":"output",
@@ -10,7 +10,7 @@
 	    "reset_lr":false,
         "early_stop_patience": 50,
         "save_epoch": 20,
-        "model_path":"./model_path/clfcn/checkpoint_289_fusion.pth"
+        "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
     },
     "Log": {
         "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
@@ -60,20 +60,16 @@
                 "color": 0
             },
             "1": {
-                "name": "cyclist",
+                "name": "car",
                 "color": 1
             },
             "2": {
-                "name": "pedestrian",
+                "name": "person",
                 "color": 2
             },
             "3": {
-                "name": "sign",
-                "color": 3
-            },
-            "4": {
                 "name": "ignore",
-                "color": 4
+                "color": 3
             }
         }
     }

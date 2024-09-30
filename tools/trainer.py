@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
 import sys
 import torch
 import torch.nn as nn
@@ -38,19 +37,17 @@ class Trainer(object):
 
         elif args.backbone == 'clft':
             resize = config['Dataset']['transforms']['resize']
-            self.model = CLFT(
-                RGB_tensor_size=(3, resize, resize),
-                XYZ_tensor_size=(3, resize, resize),
-                patch_size=config['CLFT']['patch_size'],
-                emb_dim=config['CLFT']['emb_dim'],
-                resample_dim=config['CLFT']['resample_dim'],
-                read=config['CLFT']['read'],
-                hooks=config['CLFT']['hooks'],
-                reassemble_s=config['CLFT']['reassembles'],
-                nclasses=len(config['Dataset']['classes']),
-                type=config['CLFT']['type'],
-                model_timm=config['CLFT']['model_timm'],
-            )
+            self.model = CLFT(RGB_tensor_size=(3, resize, resize),
+                              XYZ_tensor_size=(3, resize, resize),
+                              patch_size=config['CLFT']['patch_size'],
+                              emb_dim=config['CLFT']['emb_dim'],
+                              resample_dim=config['CLFT']['resample_dim'],
+                              read=config['CLFT']['read'],
+                              hooks=config['CLFT']['hooks'],
+                              reassemble_s=config['CLFT']['reassembles'],
+                              nclasses=len(config['Dataset']['classes']),
+                              type=config['CLFT']['type'],
+                              model_timm=config['CLFT']['model_timm'],)
             print(f'Using backbone {args.backbone}')
             self.optimizer_clft = torch.optim.Adam(self.model.parameters(), lr=config['CLFT']['clft_lr'])
 

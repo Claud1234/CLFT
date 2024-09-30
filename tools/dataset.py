@@ -27,39 +27,6 @@ from utils.lidar_process import get_unresized_lid_img_val
 from utils.data_augment import DataAugment
 
 
-def get_splitted_dataset(config, split, data_category, paths_rgb):
-    list_files = [os.path.basename(im) for im in paths_rgb]
-    np.random.seed(config['General']['seed'])
-    np.random.shuffle(list_files)
-    if split == 'train':
-        selected_files = list_files[:int(len(list_files)*\
-                                config['Dataset']['splits']['split_train'])]
-#        print(selected_files)
-    elif split == 'val':
-        selected_files = list_files[
-            int(len(list_files)*config['Dataset']['splits']['split_train']):
-            int(len(list_files)*config['Dataset']['splits']['split_train']) +
-            int(len(list_files)*config['Dataset']['splits']['split_val'])]
-    else:
-        selected_files = list_files[
-            int(len(list_files)*config['Dataset']['splits']['split_train']) +
-            int(len(list_files)*config['Dataset']['splits']['split_val']):]
-
-    paths_rgb = [os.path.join(config['Dataset']['paths']['path_dataset'],
-                              data_category,
-                              config['Dataset']['paths']['path_rgb'],
-                              im[:-4]+'.png') for im in selected_files]
-    paths_lidar = [os.path.join(config['Dataset']['paths']['path_dataset'],
-                                data_category,
-                                config['Dataset']['paths']['path_lidar'],
-                                im[:-4]+'.pkl') for im in selected_files]
-    paths_anno = [os.path.join(config['Dataset']['paths']['path_dataset'],
-                               data_category,
-                               config['Dataset']['paths']['path_anno'],
-                               im[:-4]+'.png') for im in selected_files]
-    return paths_rgb, paths_lidar, paths_anno
-
-
 def lidar_dilation(X, Y, Z):
     kernel = np.ones((3, 3), np.uint8)
     X_dilation = cv2.dilate(np.array(X).astype(np.float32), kernel,

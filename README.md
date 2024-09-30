@@ -26,7 +26,24 @@ Critical research about camera-and-LiDAR-based semantic object segmentation for 
 
 ## Installation 
 
-The experiments were carried out on TalTech HPC. For CLFT and CLFCN, we progrmmed upon pytorch directly and avoid too much high-level apis, thus we believe the code should be compatible with various environments. Here list out the package versions on HPC:
+The experiments were carried out on TalTech HPC. 
+For CLFT and CLFCN, we programmed upon pytorch directly and avoid too much high-level apis, 
+thus we believe the training of the models should be compatible with various environments.
+
+However, if you want to try the models we trained for our paper, there is need to keep several critical packages version
+same as ours. We use python 3.9 in all experiments. 
+
+```
+numpy-1.26.0
+pytorch-2.1.0
+tqdm-4.66.1
+tensorboard-2.15.0
+torchvision-0.16.0
+timm-0.9.8
+einops-0.7.0
+```
+Moreover, we provide our conda yml file in the repo. 
+We recommend to implement this environment if you are using our models.    
 
 
 ## Dataset

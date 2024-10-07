@@ -78,7 +78,7 @@ class Trainer(object):
                 print( f"Finished epochs in previous training: {self.finished_epochs}")
 
             if self.config['General']['epochs'] <= self.finished_epochs:
-                print('Present epochs amount is smaller than finished epochs!!!')
+                print('Current epochs amount is smaller than finished epochs!!!')
                 print(f"Please setting the epochs bigger than {self.finished_epochs}")
                 sys.exit()
             else:
@@ -156,10 +156,10 @@ class Trainer(object):
             writer.close()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
-            early_stopping(early_stop_index, epoch, modality, self.model, self.optimizer_clft)
+            early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clft)
             if ((epoch + 1) % self.config['General']['save_epoch'] == 0 and epoch > 0):
                 print('Saving model for every 10 epochs...')
-                save_model_dict(self.config, epoch, modality, self.model, self.optimizer_clft, True)
+                save_model_dict(self.config, epoch, self.model, modality, self.optimizer_clft, True)
                 print('Saving Model Complete')
             if early_stopping.early_stop_trigger is True:
                 break

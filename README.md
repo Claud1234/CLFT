@@ -69,14 +69,14 @@ Please note this script is for making visualization results in big batch. If you
 ```
 python visual_run.py -m cross_fusion -bb clft -p ./waymo_dataset/visual_run_demo.txt
 ```
-Specify the corresponding CLFT model path in the [config.json 'General''model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
+Specify the corresponding CLFT model path in the [config.json 'General' 'model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
 
 
 ### FCN
 ```
 python visual_run.py -m cross_fusion -bb clft -p ./waymo_dataset/visual_run_demo.txt
 ```
-Specify the corresponding CLFCN model path in the [config.json 'General''model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
+Specify the corresponding CLFCN model path in the [config.json 'General' 'model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
 
 
 ## Training
@@ -88,7 +88,11 @@ Specify two args for this script. \
 
 The [waymo_dataset/splits_clft/train_all.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/train_all.txt) and [waymo_dataset/splits_clft/early_stop_valid.txt](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft/early_stop_valid.txt) are specified in the script. We use 60% of the dataset for training, and 20% for validating. 
 
-TODO: clean and test the resume training function. 
+It is possible to resume the training from the saved model path. There is need to speficy three parameters to resume the training. 
+
+[config.json 'General' 'resume_training'](https://github.com/Claud1234/CLFT/blob/11c18e97c70bcade0030218736340b183ba6a869/config.json#L8) -> Set the true\
+[config.json 'General' 'resume_training_model_path'](https://github.com/Claud1234/CLFT/blob/11c18e97c70bcade0030218736340b183ba6a869/config.json#L9) -> Specify the model path that you want to resume from \
+[config.json 'General' 'reset_lr'](https://github.com/Claud1234/CLFT/blob/11c18e97c70bcade0030218736340b183ba6a869/config.json#L10)  -> You can decide to reset the learning rate or not. 
  
 ### CLFT
 ```

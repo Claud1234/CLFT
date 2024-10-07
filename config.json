@@ -15,7 +15,7 @@
     "Log": {
         "logdir_rgb": "/media/storage/claude/logs/",
         "logdir_lidar": "/media/storage/claude/logs/",
-        "logdir_fusion": "/media/storage/claude/logs/29-09-2024/"
+        "logdir_fusion": "/media/storage/claude/logs/03-10-2024/"
     },
     "CLFT": {
         "clft_lr": 8e-5,
@@ -36,11 +36,6 @@
         },
     "Dataset":{
         "name": "waymo",
-        "splits":{
-            "split_train":0.6,
-            "split_val":0.2,
-            "split_test":0.2
-        },
         "transforms":{
             "resize":384,
             "random_rotate_range":20,

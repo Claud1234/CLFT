@@ -114,9 +114,9 @@ class Tester(object):
                   f'CUM_Precision->{cum_precision[1]:.4f} '
                   f'CUM_Recall->{cum_recall[1]:.4f} '
                   f'Average Precision->{human_AP:.4f} ')
-            print(f'SIGN:CUM_IoU->{cum_IoU[1]:.4f} '
-                  f'CUM_Precision->{cum_precision[1]:.4f} '
-                  f'CUM_Recall->{cum_recall[1]:.4f} '
+            print(f'SIGN:CUM_IoU->{cum_IoU[2]:.4f} '
+                  f'CUM_Precision->{cum_precision[2]:.4f} '
+                  f'CUM_Recall->{cum_recall[2]:.4f} '
                   f'Average Precision->{human_AP:.4f} ')
             print('-----------------------------------------')
             print('Testing of the subset completed')

@@ -74,7 +74,7 @@ Specify the corresponding CLFT model path in the [config.json 'General' 'model_p
 
 ### FCN
 ```
-python visual_run.py -m cross_fusion -bb clft -p ./waymo_dataset/visual_run_demo.txt
+python visual_run.py -m cross_fusion -bb clfcn -p ./waymo_dataset/visual_run_demo.txt
 ```
 Specify the corresponding CLFCN model path in the [config.json 'General' 'model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
 

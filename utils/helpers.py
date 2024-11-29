@@ -122,41 +122,32 @@ def save_model_dict(config, epoch, model, modality, optimizer, save_check=False)
     if save_check is False:
         if sensor_modality == 'rgb':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_rgb']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_lidar']+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                        config['Log']['logdir_fusion']+f"checkpoint_{epoch}.pth")
     else:
         if sensor_modality == 'rgb':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                    config['Log'][
-                'logdir_rgb']+'progress_save/'+f"checkpoint_{epoch}.pth")
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                       config['Log']['logdir_rgb']+'progress_save/'+f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'lidar':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       config['Log'][
-                'logdir_lidar'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                       config['Log']['logdir_lidar'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
         elif sensor_modality == 'cross_fusion':
             torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       config['Log'][
-                'logdir_fusion'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
+                        'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                       config['Log']['logdir_fusion'] + 'progress_save/' + f"checkpoint_{epoch}.pth")
 
 
-def adjust_learning_rate(config, optimizer, epoch):
+def adjust_learning_rate_clft(config, optimizer, epoch):
     """Decay the learning rate based on schedule"""
     epoch_max = config['General']['epochs']
     momentum = config['CLFT']['lr_momentum']
@@ -167,6 +158,16 @@ def adjust_learning_rate(config, optimizer, epoch):
 
     return lr
 
+
+def adjust_learning_rate_clfcn(config, optimizer, epoch):
+    """Decay the learning rate based on schedule"""
+    epoch_max = config['General']['epochs']
+    coefficient = config['CLFCN']['lr_coefficient']
+    lr = config['CLFCN']['clfcn_lr'] * (1 - epoch/epoch_max) ** coefficient
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    return lr
 
 # def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
 #     mid_epoch = epoch_max/2
@@ -218,8 +219,7 @@ class EarlyStopping(object):
                 print('Saving Model Complete')
                 print('Early Stopping Triggered!')
         else:
-            print(f'Vehicle IoU increased from {self.min_param:.4f} ' +
-                  f'to {valid_param:.4f}')
+            print(f'Vehicle IoU increased from {self.min_param:.4f} ' + f'to {valid_param:.4f}')
             self.min_param = valid_param
             save_model_dict(self.config, epoch, model, modality, optimizer)
             print('Saving Model...')

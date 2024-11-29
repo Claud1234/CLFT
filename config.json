@@ -32,7 +32,8 @@
         "lr_momentum": 0.99
     },
     "CLFCN": {
-        "clfcn_lr":0.00006
+        "clfcn_lr":0.00006,
+        "lr_coefficient": 0.9
         },
     "Dataset":{
         "name": "waymo",

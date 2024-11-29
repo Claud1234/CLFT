@@ -35,5 +35,6 @@ test_dataloader = DataLoader(test_data,
                              pin_memory=True,
                              drop_last=True)
 
+
 tester.test_clft(test_dataloader, args.mode)
 print('Testing is completed')

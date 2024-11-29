@@ -6,7 +6,6 @@ import argparse
 import numpy as np
 
 from torch.utils.data import DataLoader
-from torch.utils.data import ConcatDataset
 
 from tools.trainer import Trainer
 from tools.dataset import Dataset
@@ -40,7 +39,14 @@ valid_dataloader = DataLoader(valid_data,
                               pin_memory=True,
                               drop_last=True)
 
-trainer.train_clft(train_dataloader, valid_dataloader, modal=args.mode)
+if args.backbone == 'clft':
+    trainer.train_clft(train_dataloader, valid_dataloader, modal=args.mode)
+
+elif args.backbone == 'clfcn':
+    trainer.train_clfcn(train_dataloader, valid_dataloader, modal=args.mode)
+
+else:
+    sys.exit("A backbone must be specified! (clft or clfcn)")
 
 
 

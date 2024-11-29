@@ -21,7 +21,6 @@ slurm*
 *.pth
 .ipython*
 ipython/test_img
-*.json
 *.pkl
 ipython/*.png
 test_images/*

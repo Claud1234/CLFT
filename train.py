@@ -25,14 +25,14 @@ args = parser.parse_args()
 np.random.seed(config['General']['seed'])
 trainer = Trainer(config, args)
 
-train_data = Dataset(config, 'train', './waymo_dataset/splits_clft/test_night_rain.txt')
+train_data = Dataset(config, 'train', './waymo_dataset/splits_clft/train_all.txt')
 train_dataloader = DataLoader(train_data,
                               batch_size=config['General']['batch_size'],
                               shuffle=True,
                               pin_memory=True,
                               drop_last=True)
 
-valid_data = Dataset(config, 'val', './waymo_dataset/splits_clft/test_night_rain.txt')
+valid_data = Dataset(config, 'val', './waymo_dataset/splits_clft/early_stop_valid.txt')
 valid_dataloader = DataLoader(valid_data,
                               batch_size=config['General']['batch_size'],
                               shuffle=True,

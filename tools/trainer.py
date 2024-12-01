@@ -87,6 +87,7 @@ class Trainer(object):
                 self.model.load_state_dict(checkpoint['model_state_dict'])
                 print('Loading trained optimizer...')
                 self.optimizer_clft.load_state_dict(checkpoint['optimizer_state_dict'])
+                self.optimizer_clfcn.load_state_dict(checkpoint['optimizer_state_dict'])
 
         else:
             print('Training from the beginning')
@@ -225,42 +226,42 @@ class Trainer(object):
                 train_loss = 0.0
                 batch['rgb'] = batch['rgb'].to(self.device, non_blocking=True)
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
-                batch['anno'] = batch['annotation'].to(self.device, non_blocking=True)
+                batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                self.optimizer.zero_grad()
+                self.optimizer_clfcn.zero_grad()
                 outputs = self.model(batch['rgb'], batch['lidar'], modality)
 
                 output = outputs[modality]
                 annotation = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(output, annotation)
+                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
                 union_cum += batch_union
 
                 if modality == 'rgb':
-                    loss_rgb = self.criterion(outputs['rgb'], batch['annotation'])
+                    loss_rgb = self.criterion(outputs['rgb'], batch['anno'])
                     train_loss += loss_rgb.item()
                     loss_rgb.backward()
-                    self.optimizer.step()
+                    self.optimizer_clfcn.step()
                     progress_bar.set_description(f'train rgb loss:{loss_rgb:.4f}')
 
                 elif modality == 'lidar':
-                    loss_lidar = self.criterion(outputs['lidar'], batch['annotation'])
+                    loss_lidar = self.criterion(outputs['lidar'], batch['anno'])
                     train_loss += loss_lidar.item()
                     loss_lidar.backward()
-                    self.optimizer.step()
+                    self.optimizer_clfcn.step()
                     progress_bar.set_description(f'train lidar loss:{loss_lidar:.4f}')
 
                 elif modality == 'cross_fusion':
-                    loss_rgb = self.criterion(outputs['rgb'], batch['annotation'])
-                    loss_lidar = self.criterion(outputs['lidar'], batch['annotation'])
-                    loss_fusion = self.criterion(outputs['fusion'], batch['annotation'])
+                    loss_rgb = self.criterion(outputs['rgb'], batch['anno'])
+                    loss_lidar = self.criterion(outputs['lidar'], batch['anno'])
+                    loss_fusion = self.criterion(outputs['cross_fusion'], batch['anno'])
                     loss_all = loss_rgb + loss_lidar + loss_fusion
                     train_loss += loss_all.item()
                     loss_all.backward()
-                    self.optimizer.step()
+                    self.optimizer_clfcn.step()
                     progress_bar.set_description(f'train fusion loss:{loss_all:.4f}')
 
             # The IoU of one epoch
@@ -288,7 +289,7 @@ class Trainer(object):
             save_epoch = self.config['General']['save_epoch']
             if (epoch + 1) % save_epoch == 0 and epoch > 0:
                 print(f'Saving model for every {save_epoch} epochs...')
-                save_model_dict(self.config, epoch, self.model, modality, self.optimizer_clcn, True)
+                save_model_dict(self.config, epoch, self.model, modality, self.optimizer_clfcn, True)
                 print('Saving Model Complete')
             if early_stopping.early_stop_trigger is True:
                 break
@@ -314,7 +315,7 @@ class Trainer(object):
 
                 output = outputs[modality]
                 annotation = batch['anno']
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(output, annotation)
+                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -322,19 +323,19 @@ class Trainer(object):
                 union_cum += batch_union
 
                 if modality == 'rgb':
-                    loss_rgb = self.criterion(outputs['rgb'], batch['annotation'])
+                    loss_rgb = self.criterion(outputs['rgb'], batch['anno'])
                     valid_loss += loss_rgb.item()
                     progress_bar.set_description(f'valid rgb loss:{loss_rgb:.4f}')
 
                 elif modality == 'lidar':
-                    loss_lidar = self.criterion(outputs['lidar'], batch['annotation'])
+                    loss_lidar = self.criterion(outputs['lidar'], batch['anno'])
                     valid_loss += loss_lidar.item()
                     progress_bar.set_description(f'valid lidar loss:{loss_lidar:.4f}')
 
                 elif modality == 'cross_fusion':
-                    loss_rgb = self.criterion(outputs['rgb'], batch['annotation'])
-                    loss_lidar = self.criterion(outputs['lidar'], batch['annotation'])
-                    loss_fusion = self.criterion(outputs['fusion'], batch['annotation'])
+                    loss_rgb = self.criterion(outputs['rgb'], batch['anno'])
+                    loss_lidar = self.criterion(outputs['lidar'], batch['anno'])
+                    loss_fusion = self.criterion(outputs['cross_fusion'], batch['anno'])
                     loss_all = loss_rgb + loss_lidar + loss_fusion
                     valid_loss += loss_all.item()
                     progress_bar.set_description(f'valid fusion loss:{loss_all:.4f}')

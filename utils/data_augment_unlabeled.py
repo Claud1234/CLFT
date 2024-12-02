@@ -10,11 +10,10 @@ import torch
 import random
 from PIL import Image
 
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as TF
-from torchvision.transforms.functional import InterpolationMode
+import torchvision.transforms.v2 as transforms
+import torchvision.transforms.v2.functional as TF
+from torchvision.transforms.v2.functional import InterpolationMode
 
-import configs
 from utils.lidar_process import get_resized_lid_img_val
 from utils.lidar_process import get_unresized_lid_img_val
 from utils.lidar_process import crop_pointcloud

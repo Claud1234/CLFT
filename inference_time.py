@@ -10,8 +10,8 @@ import json
 import argparse
 import numpy as np
 from PIL import Image
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as TF
+import torchvision.transforms.v2 as transforms
+import torchvision.transforms.v2.functional as TF
 
 from clft.clft import CLFT
 from clfcn.fusion_net import FusionNet

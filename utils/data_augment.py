@@ -8,9 +8,9 @@ Created on May 13rd, 2021
 import torch
 import random
 
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as TF
-from torchvision.transforms.functional import InterpolationMode
+import torchvision.transforms.v2 as transforms
+import torchvision.transforms.v2.functional as TF
+from torchvision.transforms.v2.functional import InterpolationMode
 
 from utils.lidar_process import get_resized_lid_img_val
 from utils.lidar_process import get_unresized_lid_img_val
@@ -49,13 +49,9 @@ class DataAugment(object):
         if random.random() < self.p_crop:
             random_size = random.randint(128, self.img_size - 1)
             i, j, h, w = transforms.RandomResizedCrop.get_params(
-                self.rgb, scale=(0.2, 1.), ratio=(3. / 4., 4. / 3.))
-            self.rgb = TF.resized_crop(self.rgb, i, j, h, w,
-                                       (random_size, random_size),
-                                       InterpolationMode.BILINEAR)
-            self.anno = TF.resized_crop(self.anno, i, j, h, w,
-                                        (random_size, random_size),
-                                        InterpolationMode.NEAREST)
+                self.rgb, scale=[0.2, 1.], ratio=[3. / 4., 4. / 3.])
+            self.rgb = TF.resized_crop(self.rgb, i, j, h, w, [random_size, random_size], InterpolationMode.BILINEAR)
+            self.anno = TF.resized_crop(self.anno, i, j, h, w, [random_size, random_size], InterpolationMode.NEAREST)
 
             if self.X is None and self.Y is None and self.Z is None:
                 self.points_set, self.camera_coord, _ = crop_pointcloud(
@@ -63,15 +59,9 @@ class DataAugment(object):
                 self.X, self.Y, self.Z = get_resized_lid_img_val(
                     random_size, h, w, self.points_set, self.camera_coord)
             else:
-                self.X = TF.resized_crop(self.X, i, j, h, w,
-                                       (random_size, random_size),
-                                       InterpolationMode.BILINEAR)
-                self.Y = TF.resized_crop(self.Y,  i, j, h, w,
-                                       (random_size, random_size),
-                                       InterpolationMode.BILINEAR)
-                self.Z = TF.resized_crop(self.Z, i, j, h, w,
-                                       (random_size, random_size),
-                                       InterpolationMode.BILINEAR)
+                self.X = TF.resized_crop(self.X, i, j, h, w, [random_size, random_size], InterpolationMode.BILINEAR)
+                self.Y = TF.resized_crop(self.Y,  i, j, h, w, [random_size, random_size], InterpolationMode.BILINEAR)
+                self.Z = TF.resized_crop(self.Z, i, j, h, w, [random_size, random_size], InterpolationMode.BILINEAR)
 
         return self.rgb, self.anno, self.X, self.Y, self.Z
 
@@ -80,21 +70,15 @@ class DataAugment(object):
             rotate_range = self.config['Dataset']['transforms']['random_rotate_range']
             w, h = self.rgb.size
             angle = (-rotate_range + 2 * rotate_range * torch.rand(1)[0]).item()
-            self.rgb = TF.affine(self.rgb, angle, (0, 0), 1, 0,
-                                 InterpolationMode.BILINEAR, fill=0)
-            self.anno = TF.affine(self.anno, angle, (0, 0), 1, 0,
-                                  InterpolationMode.NEAREST, fill=0)
+            self.rgb = TF.affine(self.rgb, angle, [0, 0], 1, 0, InterpolationMode.BILINEAR)
+            self.anno = TF.affine(self.anno, angle, [0, 0], 1, 0, InterpolationMode.NEAREST)
 
             if self.X is None and self.Y is None and self.Z is None:
-                self.X, self.Y, self.Z = get_unresized_lid_img_val(
-                    h, w, self.points_set, self.camera_coord)
+                self.X, self.Y, self.Z = get_unresized_lid_img_val(h, w, self.points_set, self.camera_coord)
 
-            self.X = TF.affine(self.X, angle, (0, 0), 1, 0,
-                               InterpolationMode.NEAREST, fill=0)
-            self.Y = TF.affine(self.Y, angle, (0, 0), 1, 0,
-                               InterpolationMode.NEAREST, fill=0)
-            self.Z = TF.affine(self.Z, angle, (0, 0), 1, 0,
-                               InterpolationMode.NEAREST, fill=0)
+            self.X = TF.affine(self.X, angle, [0, 0], 1, 0, InterpolationMode.NEAREST)
+            self.Y = TF.affine(self.Y, angle, [0, 0], 1, 0, InterpolationMode.NEAREST)
+            self.Z = TF.affine(self.Z, angle, [0, 0], 1, 0, InterpolationMode.NEAREST)
 
         return self.rgb, self.anno, self.X, self.Y, self.Z
 

@@ -17,8 +17,8 @@ import torch
 import argparse
 import numpy as np
 from PIL import Image
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as TF
+import torchvision.transforms.v2 as transforms
+import torchvision.transforms.v2.functional as TF
 
 import json
 from clft.clft import CLFT

@@ -7,7 +7,7 @@ Created on May 13rd, 2021
 '''
 import pickle
 import numpy as np
-import torchvision.transforms.functional as TF
+import torchvision.transforms.v2.functional as TF
 
 
 def open_lidar(lidar_path, w_ratio, h_ratio, lidar_mean, lidar_std):

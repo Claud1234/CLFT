@@ -107,8 +107,10 @@ As indicated in paper, there are different CLFT variants CLFT-Base, CLFT-Large, 
 |  CLFT-Large |        1024         | 'vit_large_patch16_384' |  [5, 11, 17, 23]  |
 
 ### FCN
+```
+python train.py -m cross_fusion -bb clfcn 
+```
 
-TODO
 
 ## Testing
 The [test.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/test.py) script is for testing the CLFT and CLFCN models. 

@@ -1,4 +1,4 @@
-Download our CLFT model paths from [HERE] (https://www.roboticlab.eu/claude/models/) and put them in this directory. We provide five paths for different variants and modalities. 
+Download our CLFT model paths from [HERE](https://www.roboticlab.eu/claude/models/) and put them in this directory. We provide five paths for different variants and modalities. 
 
 When validating or visualizing the models, specify the model path in the 
 'config.json' ['General']['model_path']. Also change the parameters in ['CLFT] corresponding to the CLFT variants. 

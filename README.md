@@ -51,7 +51,7 @@ We recommend to implement this environment if you are using our models.
 - [Dataset](waymo_dataset/README.md)
 
 ## Model
-- [Model](model_path/README.md)
+- [Model](model_path/clft/README.md)
 
 ## Visualization 
 We provide the [visual_run.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/visual_run.py) to load the model path and input data, then render out the segmentation and overlay results as PNG images. 
@@ -107,8 +107,10 @@ As indicated in paper, there are different CLFT variants CLFT-Base, CLFT-Large, 
 |  CLFT-Large |        1024         | 'vit_large_patch16_384' |  [5, 11, 17, 23]  |
 
 ### FCN
+```
+python train.py -m cross_fusion -bb clfcn 
+```
 
-TODO
 
 ## Testing
 The [test.py](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/test.py) script is for testing the CLFT and CLFCN models. 

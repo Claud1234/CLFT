@@ -1,4 +1,4 @@
-name: conda_py39_torch21
+name: clft_py39_torch21
 channels:
   - pytorch
   - nvidia

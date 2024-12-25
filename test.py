@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import json
 import sys
+import json
 import argparse
 import numpy as np
-
 from torch.utils.data import DataLoader
 
 from tools.tester import Tester
@@ -35,6 +34,11 @@ test_dataloader = DataLoader(test_data,
                              pin_memory=True,
                              drop_last=True)
 
+if args.backbone == 'clft':
+    tester.test_clft(test_dataloader, args.mode)
 
-tester.test_clft(test_dataloader, args.mode)
-print('Testing is completed')
+elif args.backbone == 'clfcn':
+    tester.test_clfcn(test_dataloader, args.mode)
+
+else:
+    sys.exit("A backbone must be specified! (clft or clfcn)")

@@ -138,8 +138,12 @@ The input path txt files are available in [waymo_dataset/splits_clft](https://gi
 
 
 ### CLFCN
+```
+python test.py -bb clfcn -m cross_fusion -p ./waymo_dataset/splits_clft/test_day_fair.txt
+```
+Specify the corresponding CLFCN model path in the [config.json 'General''model_path'](https://github.com/Claud1234/CLFT/blob/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/config.json#L13)
 
-TODO
+The input path txt files are available in [waymo_dataset/splits_clft](https://github.com/Claud1234/CLFT/tree/079f003bd6d5f9a5fa0674add1ad5048fd9999b8/waymo_dataset/splits_clft), the rest 20% of dataset were used for test. Four weather subsets are classified in different text files. 
 
 ## Bibtex
 If anything in this repo has a use for your work, please considering to cite our work. This is very helpful for the author who just finished his PhD and started to build his academic career. 

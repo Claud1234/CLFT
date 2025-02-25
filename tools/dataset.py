@@ -19,8 +19,9 @@ import torch
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 
-from utils.helpers import waymo_anno_class_relabel
-from utils.helpers import waymo_anno_class_relabel_1
+from utils.helpers import waymo_anno_class_relabel_large_scale
+from utils.helpers import waymo_anno_class_relabel_small_scale
+from utils.helpers import waymo_anno_class_relabel_all_scale
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -88,7 +89,15 @@ class Dataset(object):
             rgb = Image.open(cam_path).convert('RGB')
 
             # Here there are two class relabel functions, go to /utils/helper.py for details.
-            anno = waymo_anno_class_relabel(Image.open(anno_path))  # Tensor [1, H, W]
+            if self.config['General']['model_specialization'] == 'large':
+                anno = waymo_anno_class_relabel_large_scale(Image.open(anno_path))  # Tensor [1, H, W]
+            elif self.config['General']['model_specialization'] == 'small':
+                anno = waymo_anno_class_relabel_small_scale(Image.open(anno_path))
+            elif self.config['General']['model_specialization'] == 'all':
+                anno = waymo_anno_class_relabel_all_scale(Image.open(anno_path))
+            else:
+                sys.exit("A specialization must be specified! (large or small or all)")
+
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=4, h_ratio=4,
                                                   lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
                                                   lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])

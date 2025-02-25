@@ -2,9 +2,10 @@
     "General":{
         "device":"cuda:0",
         "epochs":400,
-        "batch_size":24,
+        "batch_size":2,
         "path_predicted_images":"output",
         "seed":0,
+        "model_specialization": "large",
         "resume_training":false,
         "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
 	    "reset_lr":false,
@@ -13,9 +14,9 @@
         "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
     },
     "Log": {
-        "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
-        "logdir_lidar": "/gpfs/mariana/smbhome/junygu/logs/lidar/",
-        "logdir_fusion": "/gpfs/mariana/smbhome/junygu/logs/17-11-2013/"
+        "logdir_rgb": "/mnt/storage/logs/",
+        "logdir_lidar": "/mnt/storage/logs/lidar/",
+        "logdir_fusion": "/mnt/storage/logs/17-11-2013/"
     },
     "CLFT": {
         "clft_lr": 8e-5,
@@ -50,23 +51,6 @@
             "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
             "lidar_std_iseauto":[7.79,  2.156, 7.60]
         },
-        "classes":{
-            "0": {
-                "name": "background",
-                "color": 0
-            },
-            "1": {
-                "name": "car",
-                "color": 1
-            },
-            "2": {
-                "name": "person",
-                "color": 2
-            },
-            "3": {
-                "name": "ignore",
-                "color": 3
-            }
-        }
+        "classes": ["background", "vehicle", "pedestrian"]
     }
 }

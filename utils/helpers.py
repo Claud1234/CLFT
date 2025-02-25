@@ -2,24 +2,21 @@
 # -*- coding: utf-8 -*-
 import os
 import cv2
+import json
 import torch
 import numpy as np
 
 
+with open('config.json') as f:
+    config = json.load(f)
+
+all_classes = config['Dataset']['classes']
+class_values = [all_classes.index(cls.lower()) for cls in all_classes]
 label_colors_list = [
         (0, 0, 0),        # B
         (0, 255, 0),            # G
         (0, 0, 255),            # R
         (100, 100, 100)]
-
-# all the classes that are present in the dataset
-ALL_CLASSES = ['background', 'vehicle', 'human', 'ignore']
-
-"""
-This (`class_values`) assigns a specific class label to each of the classes.
-For example, `vehicle=0`, `human=1`, and so on.
-"""
-class_values = [ALL_CLASSES.index(cls.lower()) for cls in ALL_CLASSES]
 
 
 def creat_dir(config):
@@ -44,13 +41,11 @@ def creat_dir(config):
         os.makedirs(logdir_fusion + 'progress_save')
 
 
-def waymo_anno_class_relabel(annotation):
+def waymo_anno_class_relabel_large_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
-    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
-                            4->cyclist, 5->background
-    :return annotation: 0->background+sign, 1->vehicle
-                            2->pedestrian+cyclist, 3->ignore
+    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
+    :return annotation: 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian
     """
     annotation = np.array(annotation)
 
@@ -61,35 +56,51 @@ def waymo_anno_class_relabel(annotation):
 
     annotation[mask_sign] = 0
     annotation[mask_background] = 0
-    annotation[mask_cyclist] = 2
-    annotation[mask_ignore] = 3
+    annotation[mask_cyclist] = 0
+    annotation[mask_ignore] = 0
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 
 
-def waymo_anno_class_relabel_1(annotation):
+def waymo_anno_class_relabel_small_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
-    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign,
-                            4->cyclist, 5->background
-    :return annotation: 0->background, 1-> cyclist 2->pedestrain, 3->sign,
-                            4->ignore+vehicle
+    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
+    :return annotation: 0->background+pedestrian+vehicle+ignore, 1-> cyclist 2->sign,
     """
     annotation = np.array(annotation)
 
     mask_ignore = annotation == 0
     mask_vehicle = annotation == 1
+    mask_pedestrian = annotation == 2
+    mask_sign = annotation == 3
     mask_cyclist = annotation == 4
     mask_background = annotation == 5
 
     annotation[mask_background] = 0
     annotation[mask_cyclist] = 1
-    annotation[mask_ignore] = 4
-    annotation[mask_vehicle] = 4
+    annotation[mask_sign] = 2
+    annotation[mask_ignore] = 0
+    annotation[mask_vehicle] = 0
+    annotation[mask_pedestrian] = 0
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 
 
+def waymo_anno_class_relabel_all_scale(annotation):
+    """
+    Reassign the indices of the objects in annotation(PointCloud);
+    :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
+    :return annotation: 0->ignore+background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
+    """
+    annotation = np.array(annotation)
+    mask_background = annotation == 5
+    annotation[mask_background] = 0
+
+    return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
+
+
+# TODO: change this when need to visualize.
 def draw_test_segmentation_map(outputs):
     labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
     # labels = outputs.squeeze().detach().cpu().numpy()
@@ -168,34 +179,6 @@ def adjust_learning_rate_clfcn(config, optimizer, epoch):
         param_group['lr'] = lr
 
     return lr
-
-# def adjust_learning_rate_semi(config, model, optimizer, epoch, epoch_max):
-#     mid_epoch = epoch_max/2
-#     if epoch <= mid_epoch:
-#         if model == 'rgb':
-#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-#                 'lr_rgb_semi']
-#         elif model == 'lidar':
-#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-#                 'lr_lidar_semi']
-#         elif model == 'fusion':
-#             lr = np.exp(-(1-epoch/mid_epoch)**2)*config['General']['fcn'][
-#                 'lr_fusion_semi']
-#     else:
-#         if model == 'rgb':
-#             lr = config['General']['fcn'][
-#                 'lr_rgb_semi'] * (1 - epoch/epoch_max)**0.9
-#         elif model == 'lidar':
-#             lr = config['General']['fcn'][
-#                 'lr_lidar_semi'] * (1 - epoch/epoch_max)**0.9
-#         elif model == 'fusion':
-#             lr = config['General']['fcn'][
-#                 'lr_fusion_semi'] * (1 - epoch/epoch_max)**0.9
-#
-#     for param_group in optimizer.param_groups:
-#         param_group['lr'] = lr
-#
-#     return lr
 
 
 class EarlyStopping(object):

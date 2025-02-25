@@ -8,9 +8,8 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
+import utils.metrics as metrics
 from clfcn.fusion_net import FusionNet
-from utils.metrics import find_overlap
-from utils.metrics import find_overlap_1
 from clft.clft import CLFT
 from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
@@ -59,11 +58,18 @@ class Trainer(object):
 
         self.nclasses = len(config['Dataset']['classes'])
         weight_loss = torch.Tensor(self.nclasses).fill_(0)
-        # define weight of different classes, 0-background, 1-car, 2-people.
-        # weight_loss[3] = 10
-        weight_loss[0] = 1
-        weight_loss[1] = 4
-        weight_loss[2] = 10
+        if self.config['General']['model_specialization'] == 'large' or 'small':
+            weight_loss[0] = 1
+            weight_loss[1] = 4
+            weight_loss[2] = 10
+        elif self.config['General']['model_specialization'] == 'all':
+            weight_loss[0] = 1
+            weight_loss[1] = 2
+            weight_loss[2] = 4
+            weight_loss[3] = 7
+            weight_loss[4] = 10
+        else:
+            sys.exit("A specialization must be specified! (large or small or all)")
         self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
         if self.config['General']['resume_training'] is True:
@@ -120,16 +126,24 @@ class Trainer(object):
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output_seg, anno)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
+
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
                 union_cum += batch_union
 
                 loss = self.criterion(output_seg, batch['anno'])
-                # w_rgb = 1.1
-                # w_lid = 0.9
-                # loss = w_rgb*loss_rgb + w_lid*loss_lidar + loss_fusion
 
                 train_loss += loss.item()
                 loss.backward()
@@ -138,8 +152,8 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print(f'Training vehicles IoU for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training human IoU for Epoch: {train_epoch_IoU[1]:.4f}')
+            print(f'Training class_0 IoU for Epoch: {train_epoch_IoU[0]:.4f}')
+            print(f'Training class_1 IoU for Epoch: {train_epoch_IoU[1]:.4f}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i + 1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -149,11 +163,6 @@ class Trainer(object):
             # Plot the train and validation loss in Tensorboard
             writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
-            # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
-                                               'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
-                                             'valid': valid_epoch_IoU[1]}, epoch)
             writer.close()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
@@ -187,7 +196,17 @@ class Trainer(object):
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output_seg, anno)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -199,8 +218,8 @@ class Trainer(object):
                 progress_bar.set_description(f'valid fusion loss: {loss:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validation vehicles IoU for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validation human IoU for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validation class_0 IoU for Epoch: {valid_epoch_IoU[0]:.4f}')
+        print(f'Validation class_1 IoU for Epoch: {valid_epoch_IoU[1]:.4f}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i + 1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')
@@ -234,7 +253,18 @@ class Trainer(object):
                 output = outputs[modality]
                 annotation = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
+
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
@@ -266,8 +296,8 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print( f'Training IoU of vehicles for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training IoU of human for Epoch: {train_epoch_IoU[1]:.4f}')
+            print( f'Training IoU of class_0 for Epoch: {train_epoch_IoU[0]:.4f}')
+            print(f'Training IoU of class_1 for Epoch: {train_epoch_IoU[1]:.4f}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i+1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -277,11 +307,7 @@ class Trainer(object):
             # Plot the train and validation loss in Tensorboard
             writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
-            # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
-                                               'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
-                                             'valid': valid_epoch_IoU[1]}, epoch)
+
             writer.close()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
@@ -315,7 +341,17 @@ class Trainer(object):
 
                 output = outputs[modality]
                 annotation = batch['anno']
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -341,8 +377,8 @@ class Trainer(object):
                     progress_bar.set_description(f'valid fusion loss:{loss_all:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validatoin IoU of vehicles for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validatoin IoU of human for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validatoin IoU of class_0 for Epoch: {valid_epoch_IoU[0]:.4f}')
+        print(f'Validatoin IoU of class_1 for Epoch: {valid_epoch_IoU[1]:.4f}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i+1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')

@@ -4,18 +4,21 @@ channels:
   - nvidia
   - conda-forge
   - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
+  - absl-py=2.1.0=pyhd8ed1ab_1
   - alsa-lib=1.2.12=h4ab18f5_0
   - aom=3.9.1=hac33072_0
   - blas=1.0=mkl
   - brotli-python=1.1.0=py39hf88036b_2
   - bzip2=1.0.8=h4bc722e_7
   - c-ares=1.33.1=heb4867d_0
-  - ca-certificates=2024.8.30=hbcca054_0
+  - ca-certificates=2025.1.31=hbcca054_0
   - cairo=1.18.0=hebfffa5_3
-  - certifi=2024.8.30=pyhd8ed1ab_0
+  - certifi=2025.1.31=pyhd8ed1ab_0
   - cffi=1.17.1=py39h15c3d72_0
   - charset-normalizer=3.3.2=pyhd8ed1ab_0
   - colorama=0.4.6=pyhd8ed1ab_0
@@ -46,6 +49,7 @@ dependencies:
   - gmp=6.3.0=hac33072_2
   - gmpy2=2.1.5=py39h7196dd7_2
   - graphite2=1.3.13=h59595ed_1003
+  - grpcio=1.62.2=py39h174d805_0
   - h2=4.1.0=pyhd8ed1ab_0
   - harfbuzz=9.0.0=hda332d3_1
   - hdf5=1.14.3=nompi_hdf9ad27_105
@@ -55,6 +59,7 @@ dependencies:
   - icu=75.1=he02047a_0
   - idna=3.10=pyhd8ed1ab_0
   - imath=3.1.12=h7955e40_0
+  - importlib-metadata=8.6.1=pyha770c72_0
   - intel-openmp=2022.0.1=h06a4308_3633
   - jasper=4.2.4=h536e39c_0
   - jinja2=3.1.4=pyhd8ed1ab_0
@@ -99,6 +104,7 @@ dependencies:
   - libglvnd=1.7.0=ha4b6fd6_0
   - libglx=1.7.0=ha4b6fd6_0
   - libgomp=14.1.0=h77fa898_1
+  - libgrpc=1.62.2=h15f2491_0
   - libhwloc=2.11.1=default_hecaa2ac_1000
   - libiconv=1.17=hd590300_2
   - libjpeg-turbo=3.0.0=hd590300_1
@@ -128,6 +134,7 @@ dependencies:
   - libpng=1.6.44=hadc24fc_0
   - libpq=16.4=h2d7952a_2
   - libprotobuf=4.25.3=hd5b35b9_1
+  - libre2-11=2023.09.01=h5a48ba9_2
   - libsqlite=3.46.1=hadc24fc_0
   - libssh2=1.11.0=h0841786_0
   - libstdcxx=14.1.0=hc0a3c3a_1
@@ -143,6 +150,7 @@ dependencies:
   - libxml2=2.12.7=he7c6b58_4
   - libzlib=1.3.1=h4ab18f5_1
   - llvm-openmp=15.0.7=h0cdce71_0
+  - markdown=3.6=pyhd8ed1ab_0
   - markupsafe=2.1.5=py39h8cd3c5a_1
   - mkl=2022.1.0=hc2b9512_224
   - mpc=1.3.1=h24ddda3_1
@@ -158,12 +166,13 @@ dependencies:
   - openexr=3.2.2=h04e0de5_2
   - openh264=2.4.1=h59595ed_0
   - openjpeg=2.5.2=h488ebb8_0
-  - openssl=3.3.2=hb9d3cd8_0
+  - openssl=3.4.1=h7b32b05_0
   - packaging=24.1=pyhd8ed1ab_0
   - pcre2=10.44=hba22ea6_2
   - pillow=10.4.0=py39h648eaa6_1
   - pip=24.2=pyh8b19718_1
   - pixman=0.43.2=h59595ed_0
+  - protobuf=4.25.3=py39hbb4dce6_1
   - pthread-stubs=0.4=hb9d3cd8_1002
   - pugixml=1.14=h59595ed_0
   - py-opencv=4.10.0=qt6_py39h1b361a7_606
@@ -176,14 +185,18 @@ dependencies:
   - pytorch-mutex=1.0=cuda
   - pyyaml=6.0.2=py39h8cd3c5a_1
   - qt6-main=6.7.3=h20baabe_0
+  - re2=2023.09.01=h7f4b329_2
   - readline=8.2=h8228510_1
   - requests=2.32.3=pyhd8ed1ab_0
   - safetensors=0.4.5=py39he612d8f_0
   - setuptools=75.1.0=pyhd8ed1ab_0
+  - six=1.17.0=pyhd8ed1ab_0
   - snappy=1.2.1=ha2e4443_0
   - svt-av1=2.2.1=h5888daf_0
   - sympy=1.13.3=pypyh2585a3b_103
   - tbb=2021.13.0=h84d6215_0
+  - tensorboard=2.18.0=pyhd8ed1ab_1
+  - tensorboard-data-server=0.7.0=py39h7170ec2_2
   - timm=0.9.8=pyhd8ed1ab_0
   - tk=8.6.13=noxft_h4845f30_101
   - torchaudio=2.1.0=py39_cu118
@@ -196,6 +209,7 @@ dependencies:
   - urllib3=2.2.3=pyhd8ed1ab_0
   - wayland=1.23.1=h3e06ad9_0
   - wayland-protocols=1.37=hd8ed1ab_0
+  - werkzeug=3.1.3=pyhd8ed1ab_1
   - wheel=0.44.0=pyhd8ed1ab_0
   - x264=1!164.3095=h166bdaf_2
   - x265=3.5=h924138e_3
@@ -221,7 +235,8 @@ dependencies:
   - xorg-xorgproto=2024.1=hb9d3cd8_1
   - xz=5.2.6=h166bdaf_0
   - yaml=0.2.5=h7f98852_2
+  - zipp=3.21.0=pyhd8ed1ab_1
   - zlib=1.3.1=h4ab18f5_1
   - zstandard=0.23.0=py39h08a7858_1
   - zstd=1.5.6=ha6fb4c9_0
-prefix: /home/autolab/miniconda3/envs/conda_py39_torch21
+prefix: /home/autolab/miniconda3/envs/clft_py39_torch21

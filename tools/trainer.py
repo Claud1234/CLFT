@@ -165,7 +165,7 @@ class Trainer(object):
                                         'valid': valid_epoch_loss}, epoch)
             writer.close()
 
-            early_stop_index = round(valid_epoch_IoU[0].item(), 4)
+            early_stop_index = round(valid_epoch_loss.item(), 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clft)
             save_epoch = self.config['General']['save_epoch']
             if (epoch + 1) % save_epoch == 0 and epoch > 0:

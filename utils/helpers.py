@@ -192,7 +192,7 @@ class EarlyStopping(object):
     def __call__(self, valid_param, epoch, model, modality, optimizer):
         if self.min_param is None:
             self.min_param = valid_param
-        elif valid_param <= self.min_param:
+        elif valid_param >= self.min_param:
             self.count += 1
             print(f'Early Stopping Counter: {self.count} of {self.patience}')
             if self.count >= self.patience:

@@ -30,11 +30,23 @@ class Trainer(object):
                                    if torch.cuda.is_available() else "cpu")
         print("device: %s" % self.device)
 
+        if self.config['General']['model_specialization'] == 'large':
+            self.nclasses = len(config['Dataset']['class_large_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_large_scale'])
+        elif self.config['General']['model_specialization'] == 'small':
+            self.nclasses = len(config['Dataset']['class_small_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_small_scale'])
+        elif self.config['General']['model_specialization'] == 'all':
+            self.nclasses = len(config['Dataset']['class_all_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_all_scale'])
+        else:
+            sys.exit("A specialization must be specified! (large or small or all)")
+        self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
+
         if args.backbone == 'clfcn':
             self.model = FusionNet()
             print(f'Using backbone {args.backbone}')
             self.optimizer_clfcn = torch.optim.Adam(self.model.parameters(), lr=config['CLFCN']['clfcn_lr'])
-
         elif args.backbone == 'clft':
             resize = config['Dataset']['transforms']['resize']
             self.model = CLFT(RGB_tensor_size=(3, resize, resize),
@@ -42,35 +54,15 @@ class Trainer(object):
                               patch_size=config['CLFT']['patch_size'],
                               emb_dim=config['CLFT']['emb_dim'],
                               resample_dim=config['CLFT']['resample_dim'],
-                              read=config['CLFT']['read'],
                               hooks=config['CLFT']['hooks'],
                               reassemble_s=config['CLFT']['reassembles'],
-                              nclasses=len(config['Dataset']['classes']),
-                              type=config['CLFT']['type'],
+                              nclasses=self.nclasses,
                               model_timm=config['CLFT']['model_timm'],)
             print(f'Using backbone {args.backbone}')
             self.optimizer_clft = torch.optim.Adam(self.model.parameters(), lr=config['CLFT']['clft_lr'])
-
         else:
             sys.exit("A backbone must be specified! (clft or clfcn)")
-
         self.model.to(self.device)
-
-        self.nclasses = len(config['Dataset']['classes'])
-        weight_loss = torch.Tensor(self.nclasses).fill_(0)
-        if self.config['General']['model_specialization'] == 'large' or 'small':
-            weight_loss[0] = 1
-            weight_loss[1] = 4
-            weight_loss[2] = 10
-        elif self.config['General']['model_specialization'] == 'all':
-            weight_loss[0] = 1
-            weight_loss[1] = 2
-            weight_loss[2] = 4
-            weight_loss[3] = 7
-            weight_loss[4] = 10
-        else:
-            sys.exit("A specialization must be specified! (large or small or all)")
-        self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
         if self.config['General']['resume_training'] is True:
             print('Resume training...')
@@ -120,7 +112,7 @@ class Trainer(object):
 
                 self.optimizer_clft.zero_grad()
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'], modality)
+                output_seg = self.model(batch['rgb'], batch['lidar'], modality)
 
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
@@ -152,8 +144,7 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print(f'Training class_0 IoU for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training class_1 IoU for Epoch: {train_epoch_IoU[1]:.4f}')
+            print(f'Training IoU for Epoch: {train_epoch_IoU}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i + 1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -191,7 +182,7 @@ class Trainer(object):
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'], modal)
+                output_seg = self.model(batch['rgb'], batch['lidar'], modal)
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
@@ -218,8 +209,7 @@ class Trainer(object):
                 progress_bar.set_description(f'valid fusion loss: {loss:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validation class_0 IoU for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validation class_1 IoU for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validation class_0 IoU for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i + 1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')
@@ -296,8 +286,7 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print( f'Training IoU of class_0 for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training IoU of class_1 for Epoch: {train_epoch_IoU[1]:.4f}')
+            print( f'Training IoU of class_0 for Epoch: {train_epoch_IoU}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i+1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -377,8 +366,7 @@ class Trainer(object):
                     progress_bar.set_description(f'valid fusion loss:{loss_all:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validatoin IoU of class_0 for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validatoin IoU of class_1 for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validatoin IoU of class_0 for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i+1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')

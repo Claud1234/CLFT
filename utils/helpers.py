@@ -10,7 +10,13 @@ import numpy as np
 with open('config.json') as f:
     config = json.load(f)
 
-all_classes = config['Dataset']['classes']
+if config['General']['model_specialization'] == 'small':
+    all_classes = config['Dataset']['class_small_scale']
+elif config['General']['model_specialization'] == 'large':
+    all_classes = config['Dataset']['class_large_scale']
+else:
+    all_classes = config['Dataset']['class_all_scale']
+
 class_values = [all_classes.index(cls.lower()) for cls in all_classes]
 label_colors_list = [
         (0, 0, 0),        # B

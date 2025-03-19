@@ -99,6 +99,7 @@ def find_overlap_all_scale(n_classes, output, anno):
     area_pred = torch.histc(pred_indices.float(), bins=n_classes, max=4, min=1)
     # ((a + c), (b + d)
     area_label = torch.histc(anno.float(), bins=n_classes, max=4, min=1)
+
     # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 

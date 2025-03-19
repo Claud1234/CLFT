@@ -131,19 +131,15 @@ def run(modality, backbone, config):
 
     elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
-        model = CLFT(
-            RGB_tensor_size=(3, resize, resize),
-            XYZ_tensor_size=(3, resize, resize),
-            patch_size=config['CLFT']['patch_size'],
-            emb_dim=config['CLFT']['emb_dim'],
-            resample_dim=config['CLFT']['resample_dim'],
-            read=config['CLFT']['read'],
-            hooks=config['CLFT']['hooks'],
-            reassemble_s=config['CLFT']['reassembles'],
-            nclasses=len(config['Dataset']['classes']),
-            type=config['CLFT']['type'],
-            model_timm=config['CLFT']['model_timm'],
-            )
+        model = CLFT(RGB_tensor_size=(3, resize, resize),
+                     XYZ_tensor_size=(3, resize, resize),
+                     patch_size=config['CLFT']['patch_size'],
+                     emb_dim=config['CLFT']['emb_dim'],
+                     resample_dim=config['CLFT']['resample_dim'],
+                     hooks=config['CLFT']['hooks'],
+                     reassemble_s=config['CLFT']['reassembles'],
+                     nclasses=len(config['Dataset']['classes']),
+                     model_timm=config['CLFT']['model_timm'], )
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
@@ -178,7 +174,7 @@ def run(modality, backbone, config):
 
         if backbone == 'clft':
             with torch.no_grad():
-                _, output_seg = model(rgb, lidar, modality)
+                output_seg = model(rgb, lidar, modality)
                 segmented_image = draw_test_segmentation_map(output_seg)
                 seg_resize = cv2.resize(segmented_image, (480, 160))
 

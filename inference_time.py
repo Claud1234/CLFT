@@ -29,32 +29,32 @@ class OpenInput(object):
     def open_rgb(self):
         rgb_normalize = transforms.Compose(
             [transforms.Resize((384, 384),
-                    interpolation=transforms.InterpolationMode.BILINEAR),
-                transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=self.config['Dataset']['transforms']['image_mean'],
-                    std=self.config['Dataset']['transforms']['image_mean'])])
+                               interpolation=transforms.InterpolationMode.BILINEAR),
+             transforms.ToTensor(),
+             transforms.Normalize(
+                 mean=self.config['Dataset']['transforms']['image_mean'],
+                 std=self.config['Dataset']['transforms']['image_mean'])])
 
         rgb = Image.open('./test_images/test_1_img.png').convert('RGB')
         # image = Image.open(
         #       '/home/claude/Data/claude_iseauto/labeled/night_fair/rgb/sq14_000061.png').\
         #         resize((480, 320)).convert('RGB')
         w_orig, h_orig = rgb.size  # original image's w and h
-        delta = int(h_orig/2)
-        top_crop_rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)
+        delta = int(h_orig / 2)
+        top_crop_rgb = TF.crop(rgb, delta, 0, h_orig - delta, w_orig)
         top_rgb_norm = rgb_normalize(top_crop_rgb)
         return top_rgb_norm
 
     def open_anno(self):
         anno_resize = transforms.Resize((384, 384),
-                        interpolation=transforms.InterpolationMode.NEAREST)
+                                        interpolation=transforms.InterpolationMode.NEAREST)
         anno = Image.open('./test_images/test_1_anno.png')
         anno = waymo_anno_class_relabel(anno)
         # annotation = Image.open(
         #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
         #          resize((480, 320), Image.BICUBIC).convert('F')
         w_orig, h_orig = anno.size  # PIL tuple. (w, h)
-        delta = int(h_orig/2)
+        delta = int(h_orig / 2)
         top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
         anno_resize = anno_resize(top_crop_anno).squeeze(0)
         return anno_resize
@@ -107,7 +107,7 @@ def run(modality, backbone, config):
         # init time logger
         starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
         repetitions = 2000
-        timings=np.zeros((repetitions,1))
+        timings = np.zeros((repetitions, 1))
 
         # GPU-WARM-UP
         for _ in range(2000):
@@ -130,17 +130,15 @@ def run(modality, backbone, config):
 
     elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
-        model = CLFT(
-            RGB_tensor_size=(3, resize, resize),
-            XYZ_tensor_size=(3, resize, resize),
-            emb_dim=config['General']['emb_dim'],
-            resample_dim=config['General']['resample_dim'],
-            read=config['General']['read'],
-            nclasses=len(config['Dataset']['classes']),
-            hooks=config['General']['hooks'],
-            model_timm=config['General']['model_timm'],
-            type=config['General']['type'],
-            patch_size=config['General']['patch_size'], )
+        model = CLFT(RGB_tensor_size=(3, resize, resize),
+                     XYZ_tensor_size=(3, resize, resize),
+                     patch_size=config['CLFT']['patch_size'],
+                     emb_dim=config['CLFT']['emb_dim'],
+                     resample_dim=config['CLFT']['resample_dim'],
+                     hooks=config['CLFT']['hooks'],
+                     reassemble_s=config['CLFT']['reassembles'],
+                     nclasses=len(config['Dataset']['classes']),
+                     model_timm=config['CLFT']['model_timm'], )
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
@@ -153,17 +151,17 @@ def run(modality, backbone, config):
         # init time logger
         starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
         repetitions = 2000
-        timings=np.zeros((repetitions,1))
+        timings = np.zeros((repetitions, 1))
 
         # GPU-WARM-UP
         for _ in range(2000):
-            _,_ = model(rgb, lidar, modality)
+            _, _ = model(rgb, lidar, modality)
         print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
-                _, output_seg = model(rgb, lidar, modality)
+                output_seg = model(rgb, lidar, modality)
                 ender.record()
                 # wait for GPU sync
                 torch.cuda.synchronize()

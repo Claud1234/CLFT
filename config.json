@@ -2,7 +2,7 @@
     "General":{
         "device":"cuda:0",
         "epochs":100,
-        "batch_size":1,
+        "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
         "model_specialization": "all",

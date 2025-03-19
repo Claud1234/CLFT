@@ -20,6 +20,15 @@ class Tester(object):
         self.device = torch.device(self.config['General']['device'] if torch.cuda.is_available() else "cpu")
         print("device: %s" % self.device)
 
+        if self.config['General']['model_specialization'] == 'large':
+            self.nclasses = len(config['Dataset']['class_large_scale'])
+        elif self.config['General']['model_specialization'] == 'small':
+            self.nclasses = len(config['Dataset']['class_small_scale'])
+        elif self.config['General']['model_specialization'] == 'all':
+            self.nclasses = len(config['Dataset']['class_all_scale'])
+        else:
+            sys.exit("A specialization must be specified! (large or small or all)")
+
         if args.backbone == 'clfcn':
             self.model = FusionNet()
             print(f'Using backbone {args.backbone}')
@@ -33,12 +42,10 @@ class Tester(object):
                               patch_size=config['CLFT']['patch_size'],
                               emb_dim=config['CLFT']['emb_dim'],
                               resample_dim=config['CLFT']['resample_dim'],
-                              read=config['CLFT']['read'],
                               hooks=config['CLFT']['hooks'],
                               reassemble_s=config['CLFT']['reassembles'],
-                              nclasses=len(config['Dataset']['classes']),
-                              type=config['CLFT']['type'],
-                              model_timm=config['CLFT']['model_timm'], )
+                              nclasses=self.nclasses,
+                              model_timm=config['CLFT']['model_timm'],)
             print(f'Using backbone {args.backbone}')
 
             model_path = config['General']['model_path']
@@ -62,7 +69,7 @@ class Tester(object):
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'], modality)
+                output_seg = self.model(batch['rgb'], batch['lidar'], modality)
 
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
@@ -89,9 +96,9 @@ class Tester(object):
                 batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
                 batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-                progress_bar.set_description(f'IoU->{batch_IoU.cpu().numpy()}'
-                                             f'Precision->{batch_precision.cpu().numpy()} '
-                                             f'Recall->{batch_recall.cpu().numpy()}')
+                progress_bar.set_description(f'IoU->{label_cum.cpu().numpy()}'
+                                             f'Precision->{pred_cum.cpu().numpy()} '
+                                             f'Recall->{overlap_cum.cpu().numpy()}')
 
             print('Overall Performance Computing...')
             cum_IoU = overlap_cum / union_cum

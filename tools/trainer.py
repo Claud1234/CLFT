@@ -209,7 +209,7 @@ class Trainer(object):
                 progress_bar.set_description(f'valid fusion loss: {loss:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validation class_0 IoU for Epoch: {valid_epoch_IoU}')
+        print(f'Validation IoU for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i + 1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')
@@ -286,7 +286,7 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print( f'Training IoU of class_0 for Epoch: {train_epoch_IoU}')
+            print( f'Training IoU for Epoch: {train_epoch_IoU}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i+1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -299,7 +299,7 @@ class Trainer(object):
 
             writer.close()
 
-            early_stop_index = round(valid_epoch_IoU[0].item(), 4)
+            early_stop_index = round(valid_epoch_loss, 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clfcn)
             save_epoch = self.config['General']['save_epoch']
             if (epoch + 1) % save_epoch == 0 and epoch > 0:
@@ -366,7 +366,7 @@ class Trainer(object):
                     progress_bar.set_description(f'valid fusion loss:{loss_all:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validatoin IoU of class_0 for Epoch: {valid_epoch_IoU}')
+        print(f'Validatoin IoU for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i+1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')

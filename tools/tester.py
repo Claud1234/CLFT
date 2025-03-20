@@ -55,7 +55,6 @@ class Tester(object):
             sys.exit("A backbone must be specified! (clft or clfcn)")
 
         self.model.to(self.device)
-        self.nclasses = len(config['Dataset']['classes'])
         self.model.eval()
 
     def test_clft(self, test_dataloader, modal):
@@ -96,9 +95,9 @@ class Tester(object):
                 batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
                 batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-                progress_bar.set_description(f'IoU->{label_cum.cpu().numpy()}'
-                                             f'Precision->{pred_cum.cpu().numpy()} '
-                                             f'Recall->{overlap_cum.cpu().numpy()}')
+                progress_bar.set_description(f'IoU->{batch_IoU.cpu().numpy()}'
+                                             f'Precision->{batch_precision.cpu().numpy()} '
+                                             f'Recall->{batch_recall.cpu().numpy()}')
 
             print('Overall Performance Computing...')
             cum_IoU = overlap_cum / union_cum
@@ -106,7 +105,6 @@ class Tester(object):
             cum_recall = overlap_cum / label_cum
             print('-----------------------------------------')
             print(f'Testing result of {self.config["General"]["model_specialization"]} scale model,'
-                  f'object classes are {self.config["Dataset"]["classes"]},'
                   f'the modality is {self.args.mode}'
                   f'the subset is {self.args.path}')
             print(f'CUM_IoU->{cum_IoU.cpu().numpy()} '
@@ -122,13 +120,6 @@ class Tester(object):
         with torch.no_grad():
             progress_bar = tqdm(test_dataloader)
 
-            background_pre = torch.zeros((len(progress_bar)), dtype=torch.float)
-            background_rec = torch.zeros((len(progress_bar)), dtype=torch.float)
-            vehicle_pre = torch.zeros((len(progress_bar)), dtype=torch.float)
-            vehicle_rec = torch.zeros((len(progress_bar)), dtype=torch.float)
-            human_pre = torch.zeros((len(progress_bar)), dtype=torch.float)
-            human_rec = torch.zeros((len(progress_bar)), dtype=torch.float)
-
             for i, batch in enumerate(progress_bar):
                 batch['rgb'] = batch['rgb'].to(self.device, non_blocking=True)
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
@@ -138,7 +129,17 @@ class Tester(object):
 
                 output = outputs[modality]
                 annotation = batch['anno']
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -149,27 +150,21 @@ class Tester(object):
                 batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
                 batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-                vehicle_pre[i] = batch_precision[0]
-                vehicle_rec[i] = batch_recall[0]
-                human_pre[i] = batch_precision[1]
-                human_rec[i] = batch_recall[1]
-
-                progress_bar.set_description(f'VEHICLE:IoU->{batch_IoU[0]:.4f} Precision->{batch_precision[0]:.4f}'
-                                             f'Recall->{batch_recall[0]:.4f}'
-                                             f'HUMAN:IoU->{batch_IoU[1]:.4f} Precision->{batch_precision[1]:.4f}'
-                                             f'Recall->{batch_recall[1]:.4f} ')
+                progress_bar.set_description(f'IoU->{batch_IoU.cpu().numpy()}'
+                                             f'Precision->{batch_precision.cpu().numpy()} '
+                                             f'Recall->{batch_recall.cpu().numpy()}')
 
             print('Overall Performance Computing...')
             cum_IoU = overlap_cum / union_cum
             cum_precision = overlap_cum / pred_cum
             cum_recall = overlap_cum / label_cum
 
-            vehicle_AP = auc_ap(vehicle_pre, vehicle_rec)
-            human_AP = auc_ap(human_pre, human_rec)
             print('-----------------------------------------')
-            print(f'VEHICLE:CUM_IoU->{cum_IoU[0]:.4f} CUM_Precision->{cum_precision[0]:.4f}'
-                  f'CUM_Recall->{cum_recall[0]:.4f} Average Precision->{vehicle_AP:.4f} \n')
-            print(f'HUMAN:CUM_IoU->{cum_IoU[1]:.4f} CUM_Precision->{cum_precision[1]:.4f}'
-                  f'CUM_Recall->{cum_recall[1]:.4f} Average Precision->{human_AP:.4f}')
+            print(f'Testing result of {self.config["General"]["model_specialization"]} scale model,'
+                  f'the modality is {self.args.mode}'
+                  f'the subset is {self.args.path}')
+            print(f'CUM_IoU->{cum_IoU.cpu().numpy()} '
+                  f'CUM_Precision->{cum_precision.cpu().numpy()} '
+                  f'CUM_Recall->{cum_recall.cpu().numpy()}')
             print('-----------------------------------------')
             print('Testing of the subset completed')

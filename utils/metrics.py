@@ -26,99 +26,83 @@ recall(2) = d / (b + d)
 '''
 
 
-def find_overlap(n_classes, output, anno):
-    '''
-    This is the function for the IEEE-TIV jounrnal paper, which only consider the Vehicle and Human(pedestrian+cyclist)
+def find_overlap_large_scale(n_classes, output, anno):
+    """
+    This is for large-scale specialized model, 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian.
     :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
-    '''
-    # 0 -> background, 1-> vehicle,  2-> human (ped+cyclist), 3 -> ignore,
-    # 4 -> cyclist.
+    """
+    # 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian
     n_classes = n_classes - 1
-    # Return each pixel value as either 0 or 1 or 2 or 3, which
-    # represent different classes.
+    # Return each pixel value as either 0 or 1 or 2,  which represent different classes.
     _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
 
-    pred_indices[anno == 3] = 0
-
-    # If pixel value in anno is 4(ignore), then it is False;
-    # if pixel value in anno is 2 or 3, then it is True.
-#    labeled = (anno > 1) * (anno <= n_classes)  # (8, 160, 480)
-    # For 'label.long()', True will be 1, False will be 0.
-    # In prediction, if value is 2 or 3, then no change;
-    #                if value is 4, then change to 0
-#    pred_indices = pred_indices * labeled.long()
-    # If pixel value in prediction is same as anno, then keep it same;
-    # if pixel value in prediction is not same as anno, then change to 0
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
 
     # (a, d)
-    area_overlap = torch.histc(overlap.float(),
-                               bins=n_classes-1, max=2, min=1)
+    area_overlap = torch.histc(overlap.float(), bins=n_classes, max=2, min=1)
     # ((a + b), (c + d)
-    area_pred = torch.histc(pred_indices.float(),
-                            bins=n_classes-1, max=2, min=1)
+    area_pred = torch.histc(pred_indices.float(), bins=n_classes, max=2, min=1)
     # ((a + c), (b + d)
-    area_label = torch.histc(anno.float(),
-                             bins=n_classes-1, max=2, min=1)
+    area_label = torch.histc(anno.float(), bins=n_classes, max=2, min=1)
     # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 
-#     area_overlap = overlap.float().sum((1, 2))
-#     area_pred = pred_indices.float().sum((1,2))
-#     area_label = anno.float().sum((1,2))
-#     area_union = (anno | pred_indices).float().sum((1,2))
-    assert (area_overlap <= area_label).all(),\
-        "Intersection area should be smaller than Union area"
+    assert (area_overlap <= area_label).all(), "Intersection area should be smaller than Union area"
 
     return area_overlap, area_pred, area_label, area_union
 
 
-def find_overlap_1(n_classes, output, anno):
-    '''
-    This is the function for the conference summary paper, ignore the car, consider pedestrian, cyclist and sign.
+def find_overlap_small_scale(n_classes, output, anno):
+    """
+    This is for small-scale specialized model, 0->background+pedestrian+vehicle+ignore, 1-> cyclist 2->sign,
     :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
-    '''
-    # 0->background, 1-> cyclist 2->pedestrain, 3->sign, 4->ignore+vehicle.
+    """
     n_classes = n_classes - 1
-    # Return each pixel value as either 0 or 1 or 2 or 3 or 4, which
-    # represent different classes.
     _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
 
-    pred_indices[anno == 4] = 0
-
-    # If pixel value in anno is 4(ignore), then it is False;
-    # if pixel value in anno is 2 or 3, then it is True.
-#    labeled = (anno > 1) * (anno <= n_classes)  # (8, 160, 480)
-    # For 'label.long()', True will be 1, False will be 0.
-    # In prediction, if value is 2 or 3, then no change;
-    #                if value is 4, then change to 0
-#    pred_indices = pred_indices * labeled.long()
-    # If pixel value in prediction is same as anno, then keep it same;
-    # if pixel value in prediction is not same as anno, then change to 0
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
-
     # (a, d)
-    area_overlap = torch.histc(overlap.float(),
-                               bins=n_classes-1, max=3, min=1)
+    area_overlap = torch.histc(overlap.float(), bins=n_classes, max=2, min=1)
     # ((a + b), (c + d)
-    area_pred = torch.histc(pred_indices.float(),
-                            bins=n_classes-1, max=3, min=1)
+    area_pred = torch.histc(pred_indices.float(), bins=n_classes, max=2, min=1)
     # ((a + c), (b + d)
-    area_label = torch.histc(anno.float(),
-                             bins=n_classes-1, max=3, min=1)
+    area_label = torch.histc(anno.float(), bins=n_classes, max=2, min=1)
     # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 
-#     area_overlap = overlap.float().sum((1, 2))
-#     area_pred = pred_indices.float().sum((1,2))
-#     area_label = anno.float().sum((1,2))
-#     area_union = (anno | pred_indices).float().sum((1,2))
+    assert (area_overlap <= area_label).all(), "Intersection area should be smaller than Union area"
+
+    return area_overlap, area_pred, area_label, area_union
+
+
+def find_overlap_all_scale(n_classes, output, anno):
+    """
+    This is for all-scale specialized model,0->ignore+background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
+    :param n_classes: Number of classes
+    :param output: 'fusion' output batch (8, 4, 160, 480)
+    :param anno: annotation batch (8, 160, 480)
+    :return: histogram statistic of overlap, prediction and annotation, union
+    """
+    n_classes = n_classes - 1
+    _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
+
+    overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
+    # (a, d)
+    area_overlap = torch.histc(overlap.float(), bins=n_classes, max=4, min=1)
+    # ((a + b), (c + d)
+    area_pred = torch.histc(pred_indices.float(), bins=n_classes, max=4, min=1)
+    # ((a + c), (b + d)
+    area_label = torch.histc(anno.float(), bins=n_classes, max=4, min=1)
+
+    # ((a + b + c), (b + c + d)
+    area_union = area_pred + area_label - area_overlap
+
     assert (area_overlap <= area_label).all(), "Intersection area should be smaller than Union area"
 
     return area_overlap, area_pred, area_label, area_union

@@ -8,9 +8,8 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
+import utils.metrics as metrics
 from clfcn.fusion_net import FusionNet
-from utils.metrics import find_overlap
-from utils.metrics import find_overlap_1
 from clft.clft import CLFT
 from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
@@ -31,11 +30,23 @@ class Trainer(object):
                                    if torch.cuda.is_available() else "cpu")
         print("device: %s" % self.device)
 
+        if self.config['General']['model_specialization'] == 'large':
+            self.nclasses = len(config['Dataset']['class_large_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_large_scale'])
+        elif self.config['General']['model_specialization'] == 'small':
+            self.nclasses = len(config['Dataset']['class_small_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_small_scale'])
+        elif self.config['General']['model_specialization'] == 'all':
+            self.nclasses = len(config['Dataset']['class_all_scale'])
+            weight_loss = torch.tensor(self.config['Dataset']['class_weight_all_scale'])
+        else:
+            sys.exit("A specialization must be specified! (large or small or all)")
+        self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
+
         if args.backbone == 'clfcn':
             self.model = FusionNet()
             print(f'Using backbone {args.backbone}')
             self.optimizer_clfcn = torch.optim.Adam(self.model.parameters(), lr=config['CLFCN']['clfcn_lr'])
-
         elif args.backbone == 'clft':
             resize = config['Dataset']['transforms']['resize']
             self.model = CLFT(RGB_tensor_size=(3, resize, resize),
@@ -43,28 +54,15 @@ class Trainer(object):
                               patch_size=config['CLFT']['patch_size'],
                               emb_dim=config['CLFT']['emb_dim'],
                               resample_dim=config['CLFT']['resample_dim'],
-                              read=config['CLFT']['read'],
                               hooks=config['CLFT']['hooks'],
                               reassemble_s=config['CLFT']['reassembles'],
-                              nclasses=len(config['Dataset']['classes']),
-                              type=config['CLFT']['type'],
+                              nclasses=self.nclasses,
                               model_timm=config['CLFT']['model_timm'],)
             print(f'Using backbone {args.backbone}')
             self.optimizer_clft = torch.optim.Adam(self.model.parameters(), lr=config['CLFT']['clft_lr'])
-
         else:
             sys.exit("A backbone must be specified! (clft or clfcn)")
-
         self.model.to(self.device)
-
-        self.nclasses = len(config['Dataset']['classes'])
-        weight_loss = torch.Tensor(self.nclasses).fill_(0)
-        # define weight of different classes, 0-background, 1-car, 2-people.
-        # weight_loss[3] = 10
-        weight_loss[0] = 1
-        weight_loss[1] = 4
-        weight_loss[2] = 10
-        self.criterion = nn.CrossEntropyLoss(weight=weight_loss).to(self.device)
 
         if self.config['General']['resume_training'] is True:
             print('Resume training...')
@@ -114,22 +112,30 @@ class Trainer(object):
 
                 self.optimizer_clft.zero_grad()
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'], modality)
+                output_seg = self.model(batch['rgb'], batch['lidar'], modality)
 
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output_seg, anno)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
+
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
                 union_cum += batch_union
 
                 loss = self.criterion(output_seg, batch['anno'])
-                # w_rgb = 1.1
-                # w_lid = 0.9
-                # loss = w_rgb*loss_rgb + w_lid*loss_lidar + loss_fusion
 
                 train_loss += loss.item()
                 loss.backward()
@@ -138,8 +144,7 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print(f'Training vehicles IoU for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training human IoU for Epoch: {train_epoch_IoU[1]:.4f}')
+            print(f'Training IoU for Epoch: {train_epoch_IoU}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i + 1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -149,14 +154,9 @@ class Trainer(object):
             # Plot the train and validation loss in Tensorboard
             writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
-            # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
-                                               'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
-                                             'valid': valid_epoch_IoU[1]}, epoch)
             writer.close()
 
-            early_stop_index = round(valid_epoch_IoU[0].item(), 4)
+            early_stop_index = round(valid_epoch_loss, 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clft)
             save_epoch = self.config['General']['save_epoch']
             if (epoch + 1) % save_epoch == 0 and epoch > 0:
@@ -182,12 +182,22 @@ class Trainer(object):
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
-                _, output_seg = self.model(batch['rgb'], batch['lidar'], modal)
+                output_seg = self.model(batch['rgb'], batch['lidar'], modal)
                 # 1xHxW -> HxW
                 output_seg = output_seg.squeeze(1)
                 anno = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output_seg, anno)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output_seg, anno)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -199,8 +209,7 @@ class Trainer(object):
                 progress_bar.set_description(f'valid fusion loss: {loss:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validation vehicles IoU for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validation human IoU for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validation IoU for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i + 1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')
@@ -234,7 +243,18 @@ class Trainer(object):
                 output = outputs[modality]
                 annotation = batch['anno']
 
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
+
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
                 label_cum += batch_label
@@ -266,8 +286,7 @@ class Trainer(object):
 
             # The IoU of one epoch
             train_epoch_IoU = overlap_cum / union_cum
-            print( f'Training IoU of vehicles for Epoch: {train_epoch_IoU[0]:.4f}')
-            print(f'Training IoU of human for Epoch: {train_epoch_IoU[1]:.4f}')
+            print( f'Training IoU for Epoch: {train_epoch_IoU}')
             # The loss_rgb of one epoch
             train_epoch_loss = train_loss / (i+1)
             print(f'Average Training Loss for Epoch: {train_epoch_loss:.4f}')
@@ -277,14 +296,10 @@ class Trainer(object):
             # Plot the train and validation loss in Tensorboard
             writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
-            # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
-                                               'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
-                                             'valid': valid_epoch_IoU[1]}, epoch)
+
             writer.close()
 
-            early_stop_index = round(valid_epoch_IoU[0].item(), 4)
+            early_stop_index = round(valid_epoch_loss, 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clfcn)
             save_epoch = self.config['General']['save_epoch']
             if (epoch + 1) % save_epoch == 0 and epoch > 0:
@@ -315,7 +330,17 @@ class Trainer(object):
 
                 output = outputs[modality]
                 annotation = batch['anno']
-                batch_overlap, batch_pred, batch_label, batch_union = find_overlap(self.nclasses, output, annotation)
+                if self.config['General']['model_specialization'] == 'large':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_large_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'small':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_small_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'all':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                else:
+                    sys.exit("A specialization must be specified! (large or small or all)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -341,8 +366,7 @@ class Trainer(object):
                     progress_bar.set_description(f'valid fusion loss:{loss_all:.4f}')
         # The IoU of one epoch
         valid_epoch_IoU = overlap_cum / union_cum
-        print(f'Validatoin IoU of vehicles for Epoch: {valid_epoch_IoU[0]:.4f}')
-        print(f'Validatoin IoU of human for Epoch: {valid_epoch_IoU[1]:.4f}')
+        print(f'Validatoin IoU for Epoch: {valid_epoch_IoU}')
         # The loss_rgb of one epoch
         valid_epoch_loss = valid_loss / (i+1)
         print(f'Average Validation Loss for Epoch: {valid_epoch_loss:.4f}')

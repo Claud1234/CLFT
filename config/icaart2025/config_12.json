@@ -1,0 +1,90 @@
+{
+    "ID": "config_12",
+    "Summary": "CLFCN, cross_fusion",
+    "CLI": {
+        "backbone": "clfcn",
+        "mode": "cross_fusion",
+        "path": "./waymo_dataset/splits_clft/test_day_fair.txt"
+    },
+    "General":{
+        "device":"cuda:0",
+        "epochs":400,
+        "batch_size":24,
+        "path_predicted_images":"output",
+        "seed":0,
+        "resume_training":false,
+        "resume_training_model_path": "/gpfs/mariana/smbhome/totahv/logs/config_12/progress_save/",
+	    "reset_lr":false,
+        "early_stop_patience": 200,
+        "save_epoch": 5,
+        "model_path":"/gpfs/mariana/smbhome/totahv/logs/config_12/"
+    },
+    "Log": {
+        "logdir_rgb": "/gpfs/mariana/smbhome/totahv/logs/config_12/",
+        "logdir_lidar": "/gpfs/mariana/smbhome/totahv/logs/config_12/",
+        "logdir_fusion": "/gpfs/mariana/smbhome/totahv/logs/config_12/"
+    },
+    "Visualize": {
+        "model_path": ""
+    },
+    "CLFT": {
+        "emb_dim": 0,
+        "hooks": [],
+        "model_timm": "",
+        "clft_lr": 8e-5,
+        "patch_size":16,
+        "reassembles": [4, 8, 16, 32],
+        "read": "projection",
+        "resample_dim": 256,
+        "type": "segmentation",
+        "loss_depth": "ssi",
+        "loss_segmentation": "ce",
+        "lr_momentum": 0.99
+    },
+    "CLFCN": {
+        "clfcn_lr":0.00006
+    },
+    "Dataset":{
+        "name": "waymo",
+        "splits":{
+            "split_train":0.6,
+            "split_val":0.2,
+            "split_test":0.2
+        },
+        "transforms":{
+            "resize":384,
+            "random_rotate_range":20,
+            "p_flip":0.5,
+            "p_crop":0.3,
+            "p_rot":0.4,
+            "image_mean":[0.485, 0.456, 0.406],
+            "image_std":[0.229, 0.224, 0.225],
+            "lidar_mean_waymo":[-0.17263354, 0.85321806, 24.5527253],
+            "lidar_std_waymo":[7.34546552, 1.17227659, 15.83745082],
+            "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
+            "lidar_std_iseauto":[7.79,  2.156, 7.60]
+        },
+        "classes":{
+            "0": {
+                "name": "background",
+                "color": 0
+            },
+            "1": {
+                "name": "cyclist",
+                "color": 1
+            },
+            "2": {
+                "name": "pedestrian",
+                "color": 2
+            },
+            "3": {
+                "name": "sign",
+                "color": 3
+            },
+            "4": {
+                "name": "ignore",
+                "color": 4
+            }
+        }
+    }
+}

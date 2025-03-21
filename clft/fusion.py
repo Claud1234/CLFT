@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -30,16 +29,14 @@ class ResidualConvUnit(nn.Module):
 class Fusion(nn.Module):
     def __init__(self, resample_dim):
         super(Fusion, self).__init__()
-        #self.res_conv1 = ResidualConvUnit(resample_dim)
         self.res_conv_xyz = ResidualConvUnit(resample_dim)
         self.res_conv_rgb = ResidualConvUnit(resample_dim)
 
         self.res_conv2 = ResidualConvUnit(resample_dim)
-        #self.resample = nn.ConvTranspose2d(resample_dim, resample_dim, kernel_size=2, stride=2, padding=0, bias=True, dilation=1, groups=1)
 
-    def forward(self, rgb, lidar, previous_stage=None, modal = 'rgb'):
-        if previous_stage == None:
-                previous_stage = torch.zeros_like(rgb)
+    def forward(self, rgb, lidar, previous_stage=None, modal=None):
+        if previous_stage is None:
+            previous_stage = torch.zeros_like(rgb)
 
         if modal == 'rgb':
             output_stage1_rgb = self.res_conv_rgb(rgb)

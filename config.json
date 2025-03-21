@@ -1,21 +1,27 @@
 {
+    "CLI": {
+        "backbone": "",
+        "mode": "",
+        "path": "./waymo_dataset/splits_clft/"
+    },
     "General":{
         "device":"cuda:0",
-        "epochs":400,
+        "epochs":100,
         "batch_size":24,
         "path_predicted_images":"output",
         "seed":0,
+        "model_specialization": "all",
         "resume_training":false,
-        "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
+        "resume_training_model_path": "/gpfs/mariana/smbhome/totahv/logs/config_x/checkpoint_x.pth",
 	    "reset_lr":false,
         "early_stop_patience": 50,
-        "save_epoch": 20,
-        "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
+        "save_epoch": 5,
+        "model_path": "/gpfs/mariana/smbhome/totahv/logs/config_x/checkpoint_x.pth"
     },
     "Log": {
-        "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
-        "logdir_lidar": "/gpfs/mariana/smbhome/junygu/logs/lidar/",
-        "logdir_fusion": "/gpfs/mariana/smbhome/junygu/logs/17-11-2013/"
+        "logdir_rgb": "/mimer/NOBACKUP/groups/naiss2025-23-40/logs/18-03-2025/",
+        "logdir_lidar": "/mimer/NOBACKUP/groups/naiss2025-23-40/logs/18-03-2025_1/",
+        "logdir_fusion": "/mimer/NOBACKUP/groups/naiss2025-23-40/logs/18-03-2025_2/"
     },
     "CLFT": {
         "clft_lr": 8e-5,
@@ -23,12 +29,8 @@
         "emb_dim": 768,
         "hooks": [2, 5, 8, 11],
         "reassembles": [4, 8, 16, 32],
-        "read": "projection",
         "resample_dim": 256,
-        "type": "segmentation",
         "model_timm": "vit_base_patch16_384",
-        "loss_depth": "ssi",
-        "loss_segmentation": "ce",
         "lr_momentum": 0.99
     },
     "CLFCN": {
@@ -50,23 +52,11 @@
             "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
             "lidar_std_iseauto":[7.79,  2.156, 7.60]
         },
-        "classes":{
-            "0": {
-                "name": "background",
-                "color": 0
-            },
-            "1": {
-                "name": "car",
-                "color": 1
-            },
-            "2": {
-                "name": "person",
-                "color": 2
-            },
-            "3": {
-                "name": "ignore",
-                "color": 3
-            }
-        }
+        "class_all_scale": ["background", "vehicle", "pedestrian", "sign", "cyclist"],
+        "class_small_scale": ["background", "cyclist", "sign"],
+        "class_large_scale": ["background", "vehicle", "pedestrian"],
+        "class_weight_all_scale": [0.2, 4.0, 67.0, 155.0, 1170.0],
+        "class_weight_small_scale": [0.3, 1959.0, 261.0],
+        "class_weight_large_scale": [0.34, 8.11, 117.0]
     }
 }

@@ -1,4 +1,3 @@
-*.sh
 .project
 .pydevproject
 .settings
@@ -16,7 +15,6 @@ result_screenshots
 .idea
 .ipy*
 slurm*
-*.slurm
 *.out
 *.pth
 .ipython*

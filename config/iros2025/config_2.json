@@ -1,0 +1,60 @@
+{
+    "CLI": {
+        "backbone": "clft",
+        "mode": "cross_fusion",
+        "path": "./waymo_dataset/splits_clft/"
+    },
+    "General":{
+        "device":"cuda:0",
+        "epochs":100,
+        "batch_size":24,
+        "path_predicted_images":"output",
+        "seed":0,
+        "model_specialization": "large",
+        "resume_training":false,
+        "resume_training_model_path": "",
+	    "reset_lr":false,
+        "early_stop_patience": 50,
+        "save_epoch": 5,
+        "model_path": ""
+    },
+    "Log": {
+        "logdir": "/gpfs/mariana/smbhome/totahv/iros2025/config_1/"
+    },
+    "CLFT": {
+        "clft_lr": 8e-5,
+        "patch_size":16,
+        "emb_dim": 768,
+        "hooks": [2, 5, 8, 11],
+        "reassembles": [4, 8, 16, 32],
+        "resample_dim": 256,
+        "model_timm": "vit_base_patch16_384",
+        "lr_momentum": 0.99
+    },
+    "CLFCN": {
+        "clfcn_lr":0.00006,
+        "lr_coefficient": 0.9
+        },
+    "Dataset":{
+        "name": "waymo",
+        "transforms":{
+            "resize":384,
+            "random_rotate_range":20,
+            "p_flip":0.5,
+            "p_crop":0.3,
+            "p_rot":0.4,
+            "image_mean":[0.485, 0.456, 0.406],
+            "image_std":[0.229, 0.224, 0.225],
+            "lidar_mean_waymo":[-0.17263354, 0.85321806, 24.5527253],
+            "lidar_std_waymo":[7.34546552, 1.17227659, 15.83745082],
+            "lidar_mean_iseauto":[-0.079, 0.033, 15.90],
+            "lidar_std_iseauto":[7.79,  2.156, 7.60]
+        },
+        "class_all_scale": ["background", "vehicle", "pedestrian", "sign", "cyclist"],
+        "class_small_scale": ["background", "cyclist", "sign"],
+        "class_large_scale": ["background", "vehicle", "pedestrian"],
+        "class_weight_all_scale": [0.2, 4.0, 67.0, 155.0, 1170.0],
+        "class_weight_small_scale": [0.3, 1959.0, 261.0],
+        "class_weight_large_scale": [0.34, 8.11, 117.0]
+    }
+}

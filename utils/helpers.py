@@ -26,9 +26,9 @@ label_colors_list = [
 
 
 def creat_dir(config):
-    logdir_rgb = config['Log']['logdir_rgb']
-    logdir_lidar = config['Log']['logdir_lidar']
-    logdir_fusion = config['Log']['logdir_fusion']
+    logdir_rgb = config['Log']['logdir']
+    logdir_lidar = config['Log']['logdir']
+    logdir_fusion = config['Log']['logdir']
     if not os.path.exists(logdir_rgb):
         os.makedirs(logdir_rgb)
         print(f'Making log directory {logdir_rgb}...')

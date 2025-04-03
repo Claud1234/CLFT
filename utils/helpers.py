@@ -51,7 +51,7 @@ def waymo_anno_class_relabel_large_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian
+    :return annotation: 0->background+sign+cyclist, 1->vehicle, 2->pedestrian, 3->ignore
     """
     annotation = np.array(annotation)
 
@@ -62,8 +62,8 @@ def waymo_anno_class_relabel_large_scale(annotation):
 
     annotation[mask_sign] = 0
     annotation[mask_background] = 0
-    annotation[mask_cyclist] = 0
-    annotation[mask_ignore] = 0
+    annotation[mask_cyclist] = 3
+    annotation[mask_ignore] = 3
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 
@@ -72,7 +72,7 @@ def waymo_anno_class_relabel_small_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->background+pedestrian+vehicle+ignore, 1-> cyclist 2->sign,
+    :return annotation: 0->background, 1-> cyclist 2->sign, 3->pedestrian+vehicle+ignore
     """
     annotation = np.array(annotation)
 
@@ -86,9 +86,9 @@ def waymo_anno_class_relabel_small_scale(annotation):
     annotation[mask_background] = 0
     annotation[mask_cyclist] = 1
     annotation[mask_sign] = 2
-    annotation[mask_ignore] = 0
-    annotation[mask_vehicle] = 0
-    annotation[mask_pedestrian] = 0
+    annotation[mask_ignore] = 3
+    annotation[mask_vehicle] = 3
+    annotation[mask_pedestrian] = 3
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 
@@ -97,11 +97,14 @@ def waymo_anno_class_relabel_all_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->ignore+background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
+    :return annotation: 0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->ignore
     """
     annotation = np.array(annotation)
     mask_background = annotation == 5
+    mask_ignore = annotation == 0
+
     annotation[mask_background] = 0
+    annotation[mask_ignore] = 5
 
     return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
 

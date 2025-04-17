@@ -100,7 +100,7 @@ class Dataset(object):
             elif self.config['General']['model_specialization'] == 'all':
                 anno = waymo_anno_class_relabel_all_scale(Image.open(anno_path))
             elif self.config['General']['model_specialization'] == 'cross':
-                anno = waymo_anno_class_relabel_cross_scale(Image.open(anno_path))
+                anno = waymo_anno_class_relabel_cross_scale(Image.open(anno_path).resize((480, 160), Image.BILINEAR))
             else:
                 sys.exit("A specialization must be specified! (large or small or all or cross)")
 
@@ -114,11 +114,7 @@ class Dataset(object):
             lidar_path = cam_path.replace('/rgb', '/pkl').replace('.png', '.pkl')
 
             rgb = Image.open(cam_path).resize((480, 320), Image.BILINEAR)
-
-            if self.config['General']['model_specialization'] == 'cross':
-                anno = Image.open(anno_path).resize((480, 160), Image.BILINEAR)
-            else:
-                anno = Image.open(anno_path).resize((480, 320), Image.BILINEAR)
+            anno = Image.open(anno_path).resize((480, 320), Image.BILINEAR)
 
             anno = torch.from_numpy(np.array(anno)).unsqueeze(0).long()
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=8.84, h_ratio=8.825,

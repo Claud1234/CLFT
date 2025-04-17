@@ -94,13 +94,13 @@ def run(modality, backbone, config):
                            lidar_std=config['Dataset']['transforms']['lidar_mean_waymo'],
                            w_ratio=4, h_ratio=4)
 
-    if config['General']['model_specialization'] == 'large':
+    if args.specialization == 'large':
         n_classes = len(config['Dataset']['class_large_scale'])
-    elif config['General']['model_specialization'] == 'small':
+    elif args.specialization == 'small':
         n_classes = len(config['Dataset']['class_small_scale'])
-    elif config['General']['model_specialization'] == 'all':
+    elif args.specialization == 'all':
         n_classes = len(config['Dataset']['class_all_scale'])
-    elif config['General']['model_specialization'] == 'cross':
+    elif args.specialization == 'cross':
         n_classes = len(config['Dataset']['class_cross_scale'])
     else:
         sys.exit("A specialization must be specified! (large or small or all or cross)")
@@ -108,7 +108,7 @@ def run(modality, backbone, config):
     if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        checkpoint = torch.load(config['General']['model_path'], map_location=device)
+        checkpoint = torch.load(args.model_path, map_location=device)
 
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
@@ -127,7 +127,7 @@ def run(modality, backbone, config):
                      model_timm=config['CLFT']['model_timm'], )
         print(f'Using backbone {args.backbone}')
 
-        model_path = config['General']['model_path']
+        model_path = args.model_path
         model.load_state_dict(torch.load(model_path, map_location=device)['model_state_dict'])
         model.to(device)
         model.eval()
@@ -189,6 +189,8 @@ if __name__ == '__main__':
                         help='Use the backbone of training, clft or clfcn')
     parser.add_argument('-p', '--path', type=str, required=True,
                         help='The path of the text file to visualize')
+    parser.add_argument('-mp', '--model_path', type=str, required=True,
+                        help='The model path checkpoint.')
     args = parser.parse_args()
 
     with open('config.json', 'r') as f:

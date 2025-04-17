@@ -22,6 +22,7 @@ import torchvision.transforms.functional as TF
 from utils.helpers import waymo_anno_class_relabel_large_scale
 from utils.helpers import waymo_anno_class_relabel_small_scale
 from utils.helpers import waymo_anno_class_relabel_all_scale
+from utils.helpers import waymo_anno_class_relabel_cross_scale
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -82,7 +83,10 @@ class Dataset(object):
 
         if self.config['Dataset']['name'] == 'waymo':
             cam_path = os.path.join(dataroot, self.list_examples_cam[idx])
-            anno_path = cam_path.replace('/camera', '/annotation')
+            if self.config['General']['model_specialization'] == 'cross':
+                anno_path = cam_path.replace('/camera', '/annotation_cross')
+            else:
+                anno_path = cam_path.replace('/camera', '/annotation')
             lidar_path = cam_path.replace('/camera', '/lidar').replace('.png', '.pkl')
 
             # waymo rgb and anno is in 480x320, lidar is in 1920x1280
@@ -95,8 +99,10 @@ class Dataset(object):
                 anno = waymo_anno_class_relabel_small_scale(Image.open(anno_path))
             elif self.config['General']['model_specialization'] == 'all':
                 anno = waymo_anno_class_relabel_all_scale(Image.open(anno_path))
+            elif self.config['General']['model_specialization'] == 'cross':
+                anno = waymo_anno_class_relabel_cross_scale(Image.open(anno_path))
             else:
-                sys.exit("A specialization must be specified! (large or small or all)")
+                sys.exit("A specialization must be specified! (large or small or all or cross)")
 
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=4, h_ratio=4,
                                                   lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
@@ -108,7 +114,12 @@ class Dataset(object):
             lidar_path = cam_path.replace('/rgb', '/pkl').replace('.png', '.pkl')
 
             rgb = Image.open(cam_path).resize((480, 320), Image.BILINEAR)
-            anno = Image.open(anno_path).resize((480, 320), Image.BILINEAR)
+
+            if self.config['General']['model_specialization'] == 'cross':
+                anno = Image.open(anno_path).resize((480, 160), Image.BILINEAR)
+            else:
+                anno = Image.open(anno_path).resize((480, 320), Image.BILINEAR)
+
             anno = torch.from_numpy(np.array(anno)).unsqueeze(0).long()
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=8.84, h_ratio=8.825,
                                                   lidar_mean=self.config['Dataset']['transforms']['lidar_mean_iseauto'],
@@ -128,7 +139,11 @@ class Dataset(object):
         w_orig, h_orig = rgb.size  # PIL tuple. (w, h)
         delta = int(h_orig/2)
         top_crop_rgb = TF.crop(rgb, delta, 0, h_orig-delta, w_orig)  # w,h
-        top_crop_anno = TF.crop(anno, delta, 0, h_orig-delta, w_orig)
+
+        if self.config['General']['model_specialization'] == 'cross':
+            top_crop_anno = anno
+        else:
+            top_crop_anno = TF.crop(anno, delta, 0, h_orig-delta, w_orig)
 
         top_crop_points_set, top_crop_camera_coord, _ = crop_pointcloud(
             points_set, camera_coord, delta, 0, h_orig-delta, w_orig)

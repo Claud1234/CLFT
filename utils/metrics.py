@@ -28,14 +28,14 @@ recall(2) = d / (b + d)
 
 def find_overlap_large_scale(n_classes, output, anno):
     """
-    This is for large-scale specialized model, 0->background, 1->vehicle, 2->pedestrian, 3->sign+cyclist+ignore
+    This is for large-scale specialized model, 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian
     :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
     """
     # 0->background, 1->vehicle, 2->pedestrian, 3->sign+cyclist+ignore
-    n_classes = n_classes - 2
+    n_classes = n_classes - 1
     # Return each pixel value as either 0 or 1 or 2,  which represent different classes.
     _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
 
@@ -57,13 +57,13 @@ def find_overlap_large_scale(n_classes, output, anno):
 
 def find_overlap_small_scale(n_classes, output, anno):
     """
-    This is for small-scale specialized model, 0->background, 1-> cyclist 2->sign, 3->pedestrian+vehicle+ignore
+    This is for small-scale specialized model, 0->background+pedestrian+vehicle+ignore, 1-> cyclist 2->sign
     :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 4, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
     """
-    n_classes = n_classes - 2
+    n_classes = n_classes - 1
     _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
 
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
@@ -83,13 +83,40 @@ def find_overlap_small_scale(n_classes, output, anno):
 
 def find_overlap_all_scale(n_classes, output, anno):
     """
-    This is for all-scale specialized model,0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->ignore
+    This is for all-scale specialized model,0->background+ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
     :param n_classes: Number of classes
     :param output: 'fusion' output batch (8, 6, 160, 480)
     :param anno: annotation batch (8, 160, 480)
     :return: histogram statistic of overlap, prediction and annotation, union
     """
-    n_classes = n_classes - 2
+    n_classes = n_classes - 1
+    _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
+
+    overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
+    # (a, d)
+    area_overlap = torch.histc(overlap.float(), bins=n_classes, max=4, min=1)
+    # ((a + b), (c + d)
+    area_pred = torch.histc(pred_indices.float(), bins=n_classes, max=4, min=1)
+    # ((a + c), (b + d)
+    area_label = torch.histc(anno.float(), bins=n_classes, max=4, min=1)
+
+    # ((a + b + c), (b + c + d)
+    area_union = area_pred + area_label - area_overlap
+
+    assert (area_overlap <= area_label).all(), "Intersection area should be smaller than Union area"
+
+    return area_overlap, area_pred, area_label, area_union
+
+
+def find_overlap_cross_scale(n_classes, output, anno):
+    """
+    This is for all-scale specialized model,0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
+    :param n_classes: Number of classes
+    :param output: 'fusion' output batch (8, 6, 160, 480)
+    :param anno: annotation batch (8, 160, 480)
+    :return: histogram statistic of overlap, prediction and annotation, union
+    """
+    n_classes = n_classes - 1
     _, pred_indices = torch.max(output, dim=1)  # (8, 160, 480)
 
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)

@@ -51,7 +51,7 @@ def waymo_anno_class_relabel_large_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->background+sign+cyclist, 1->vehicle, 2->pedestrian, 3->ignore
+    :return annotation: 0->background+sign+cyclist+ignore, 1->vehicle, 2->pedestrian,
     """
     annotation = np.array(annotation)
 
@@ -62,17 +62,17 @@ def waymo_anno_class_relabel_large_scale(annotation):
 
     annotation[mask_sign] = 0
     annotation[mask_background] = 0
-    annotation[mask_cyclist] = 3
-    annotation[mask_ignore] = 3
+    annotation[mask_cyclist] = 0
+    annotation[mask_ignore] = 0
 
-    return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
+    return torch.from_numpy(annotation).unsqueeze(0).long()  # [H,W]->[1,H,W]
 
 
 def waymo_anno_class_relabel_small_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->background, 1-> cyclist 2->sign, 3->pedestrian+vehicle+ignore
+    :return annotation: 0->background+pedestrian+vehicle+ignore, 1-> cyclist 2->sign
     """
     annotation = np.array(annotation)
 
@@ -86,27 +86,38 @@ def waymo_anno_class_relabel_small_scale(annotation):
     annotation[mask_background] = 0
     annotation[mask_cyclist] = 1
     annotation[mask_sign] = 2
-    annotation[mask_ignore] = 3
-    annotation[mask_vehicle] = 3
-    annotation[mask_pedestrian] = 3
+    annotation[mask_ignore] = 0
+    annotation[mask_vehicle] = 0
+    annotation[mask_pedestrian] = 0
 
-    return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
+    return torch.from_numpy(annotation).unsqueeze(0).long()  # [H,W]->[1,H,W]
 
 
 def waymo_anno_class_relabel_all_scale(annotation):
     """
     Reassign the indices of the objects in annotation(PointCloud);
     :parameter annotation: 0->ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->background
-    :return annotation: 0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist, 5->ignore
+    :return annotation: 0->background+ignore, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist,
     """
     annotation = np.array(annotation)
     mask_background = annotation == 5
     mask_ignore = annotation == 0
 
     annotation[mask_background] = 0
-    annotation[mask_ignore] = 5
+    annotation[mask_ignore] = 0
 
-    return torch.from_numpy(annotation).unsqueeze(0).long() # [H,W]->[1,H,W]
+    return torch.from_numpy(annotation).unsqueeze(0).long()  # [H,W]->[1,H,W]
+
+
+def waymo_anno_class_relabel_cross_scale(annotation):
+    """
+    Reassign the indices of the objects in annotation(PointCloud);
+    :parameter annotation: 0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist
+    :return annotation: 0->background, 1->vehicle, 2->pedestrian, 3->sign, 4->cyclist,
+    """
+    annotation = np.array(annotation)
+
+    return torch.from_numpy(annotation).unsqueeze(0).long()  # [H,W]->[1,H,W]
 
 
 # TODO: change this when need to visualize.
@@ -211,7 +222,7 @@ class EarlyStopping(object):
                 print('Saving Model Complete')
                 print('Early Stopping Triggered!')
         else:
-            print(f'Vehicle IoU increased from {self.min_param:.4f} ' + f'to {valid_param:.4f}')
+            print(f'Valid loss decreases from {self.min_param:.4f} ' + f'to {valid_param:.4f}')
             self.min_param = valid_param
             save_model_dict(self.config, epoch, model, modality, optimizer)
             print('Saving Model...')

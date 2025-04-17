@@ -26,8 +26,10 @@ class Tester(object):
             self.nclasses = len(config['Dataset']['class_small_scale'])
         elif self.config['General']['model_specialization'] == 'all':
             self.nclasses = len(config['Dataset']['class_all_scale'])
+        elif self.config['General']['model_specialization'] == 'cross':
+            self.nclasses = len(config['Dataset']['class_cross_scale'])
         else:
-            sys.exit("A specialization must be specified! (large or small or all)")
+            sys.exit("A specialization must be specified! (large or small or all or cross)")
 
         if args.backbone == 'clfcn':
             self.model = FusionNet()
@@ -83,8 +85,11 @@ class Tester(object):
                 elif self.config['General']['model_specialization'] == 'all':
                     batch_overlap, batch_pred, batch_label, batch_union = \
                         metrics.find_overlap_all_scale(self.nclasses, output_seg, anno)
+                elif self.config['General']['model_specialization'] == 'cross':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_cross_scale(self.nclasses, output_seg, anno)
                 else:
-                    sys.exit("A specialization must be specified! (large or small or all)")
+                    sys.exit("A specialization must be specified! (large or small or all or cross)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred
@@ -138,8 +143,11 @@ class Tester(object):
                 elif self.config['General']['model_specialization'] == 'all':
                     batch_overlap, batch_pred, batch_label, batch_union = \
                         metrics.find_overlap_all_scale(self.nclasses, output, annotation)
+                elif self.config['General']['model_specialization'] == 'cross':
+                    batch_overlap, batch_pred, batch_label, batch_union = \
+                        metrics.find_overlap_cross_scale(self.nclasses, output, annotation)
                 else:
-                    sys.exit("A specialization must be specified! (large or small or all)")
+                    sys.exit("A specialization must be specified! (large or small or all or cross)")
 
                 overlap_cum += batch_overlap
                 pred_cum += batch_pred

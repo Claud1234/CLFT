@@ -93,7 +93,17 @@ def run(modality, backbone, config):
                            lidar_mean=config['Dataset']['transforms']['lidar_mean_waymo'],
                            lidar_std=config['Dataset']['transforms']['lidar_mean_waymo'],
                            w_ratio=4, h_ratio=4)
-    n_classes = len(config['Dataset']['class_small_scale'])
+
+    if config['General']['model_specialization'] == 'large':
+        n_classes = len(config['Dataset']['class_large_scale'])
+    elif config['General']['model_specialization'] == 'small':
+        n_classes = len(config['Dataset']['class_small_scale'])
+    elif config['General']['model_specialization'] == 'all':
+        n_classes = len(config['Dataset']['class_all_scale'])
+    elif config['General']['model_specialization'] == 'cross':
+        n_classes = len(config['Dataset']['class_cross_scale'])
+    else:
+        sys.exit("A specialization must be specified! (large or small or all or cross)")
 
     if backbone == 'clfcn':
         model = FusionNet()
@@ -154,7 +164,7 @@ def run(modality, backbone, config):
 
                 if not os.path.exists(os.path.dirname(pred_path)):
                     os.makedirs(os.path.dirname(pred_path))
-                print(f'saving prediction result {i}...')
+                print(f'saving prediction result {i}...', end='\r')
                 cv2.imwrite(pred_path, pred_index)
 
         elif backbone == 'clfcn':
@@ -172,7 +182,8 @@ if __name__ == '__main__':
                         choices=['rgb', 'lidar', 'cross_fusion'],
                         help='Output mode (lidar, rgb or cross_fusion)')
     parser.add_argument('-s', '--specialization', type=str, required=True,
-                        choices=['small', 'large'], help='Model specialization. (large or small)')
+                        choices=['small', 'large', 'all', 'cross'],
+                        help='Model specialization. (large or small or all or cross)')
     parser.add_argument('-bb', '--backbone', required=True,
                         choices=['clfcn', 'clft'],
                         help='Use the backbone of training, clft or clfcn')

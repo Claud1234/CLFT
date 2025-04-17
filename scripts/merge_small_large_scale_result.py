@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-merge the prediction results from small and large specialized model to a three-channel image.
+merge the prediction results from small and large specialized model as the new annotation for training.
 In small_scale, change cyclist and sign's index from 1, 2 to 4, 3.
 In large-scale, vehicle and ped will be same as 1, 2.
-So the final result will be same as the annotation. Append an all-zero channel at the third channel.
+When combining, to increase the representation of small_scale objects, 3 and 4 are prior than 1 and 2.
 
 ONLY WORKS FOR CLFT!!
 Created on 10th April 2025
@@ -37,9 +37,9 @@ def run(args):
         small[small == 1] = 4
         small[small == 2] = 3
 
-        img = np.zeros((384, 384, 3))
-        img[:, :, 0] = small
-        img[:, :, 1] = large
+        img = large.copy()
+        small_none_0 = small != 0
+        img[small_none_0] = small[small_none_0]
 
         if not os.path.exists(os.path.dirname(small_large_merge_path)):
             os.makedirs(os.path.dirname(small_large_merge_path))

@@ -15,7 +15,7 @@ import torchvision.transforms.v2.functional as TF
 
 from clft.clft import CLFT
 from clfcn.fusion_net import FusionNet
-from utils.helpers import waymo_anno_class_relabel
+from utils.helpers import waymo_anno_class_relabel_all_scale, waymo_anno_class_relabel_small_scale, waymo_anno_class_relabel_large_scale, waymo_anno_class_relabel_cross_scale
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -49,10 +49,18 @@ class OpenInput(object):
         anno_resize = transforms.Resize((384, 384),
                                         interpolation=transforms.InterpolationMode.NEAREST)
         anno = Image.open('./test_images/test_1_anno.png')
-        anno = waymo_anno_class_relabel(anno)
-        # annotation = Image.open(
-        #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
-        #          resize((480, 320), Image.BICUBIC).convert('F')
+        
+        model_specialization = self.config.get('General', {}).get('model_specialization', 'all')
+
+        if model_specialization == 'small':
+            anno = waymo_anno_class_relabel_small_scale(anno)
+        elif model_specialization == 'large':
+            anno = waymo_anno_class_relabel_large_scale(anno)
+        elif model_specialization == 'cross':
+            anno = waymo_anno_class_relabel_cross_scale(anno)
+        else:  # 'all'
+            anno = waymo_anno_class_relabel_all_scale(anno)
+        
         w_orig, h_orig = anno.size  # PIL tuple. (w, h)
         delta = int(h_orig / 2)
         top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
@@ -130,6 +138,20 @@ def run(modality, backbone, config):
 
     elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
+        
+        model_specialization = config.get('General', {}).get('model_specialization', 'all')
+        
+        if model_specialization == 'small':
+            nclasses = len(config['Dataset']['class_small_scale'])
+        elif model_specialization == 'large':
+            nclasses = len(config['Dataset']['class_large_scale'])
+        elif model_specialization == 'cross':
+            nclasses = len(config['Dataset']['class_cross_scale'])
+        else:  # 'all'
+            nclasses = len(config['Dataset']['class_all_scale']) + 1
+            
+        print(f"Initializing CLFT model with {nclasses} classes for '{model_specialization}' specialization")
+            
         model = CLFT(RGB_tensor_size=(3, resize, resize),
                      XYZ_tensor_size=(3, resize, resize),
                      patch_size=config['CLFT']['patch_size'],
@@ -137,8 +159,8 @@ def run(modality, backbone, config):
                      resample_dim=config['CLFT']['resample_dim'],
                      hooks=config['CLFT']['hooks'],
                      reassemble_s=config['CLFT']['reassembles'],
-                     nclasses=len(config['Dataset']['classes']),
-                     model_timm=config['CLFT']['model_timm'], )
+                     nclasses=nclasses,
+                     model_timm=config['CLFT']['model_timm'])
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
@@ -155,7 +177,7 @@ def run(modality, backbone, config):
 
         # GPU-WARM-UP
         for _ in range(2000):
-            _, _ = model(rgb, lidar, modality)
+            _ = model(rgb, lidar, modality)
         print('GPU warm up is done with 2000 iterations')
 
         with torch.no_grad():
@@ -170,20 +192,20 @@ def run(modality, backbone, config):
 
         mean_syn = np.sum(timings) / repetitions
         std_syn = np.std(timings)
-        print(f'Mean execute time of 2000 iterations is {mean_syn} milliseconds')
+        print(f'Mean execute time of 2000 iterations for {model_specialization} specialization is {mean_syn} milliseconds')
 
     else:
         sys.exit("A backbone must be specified! (dpt or fcn)")
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='visual run script')
+    parser = argparse.ArgumentParser(description='Inference time measurement script')
     parser.add_argument('-m', '--mode', type=str, required=True,
                         choices=['rgb', 'lidar', 'cross_fusion'],
                         help='Output mode (lidar, rgb or cross_fusion)')
     parser.add_argument('-bb', '--backbone', required=True,
-                        choices=['fcn', 'dpt'],
-                        help='Use the backbone of training, dpt or fcn')
+                        choices=['clfcn', 'clft'],
+                        help='Use the backbone of training, clft or clfcn')
     args = parser.parse_args()
 
     with open('config.json', 'r') as f:

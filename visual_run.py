@@ -23,7 +23,7 @@ import torchvision.transforms.v2.functional as TF
 import json
 from clft.clft import CLFT
 from clfcn.fusion_net import FusionNet
-from utils.helpers import waymo_anno_class_relabel
+from utils.helpers import waymo_anno_class_relabel_cross_scale, waymo_anno_class_relabel_small_scale, waymo_anno_class_relabel_large_scale, waymo_anno_class_relabel_all_scale
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -70,10 +70,19 @@ class OpenInput(object):
         clft_anno_resize = transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.NEAREST)
         anno = Image.open(anno_path)
 
-        anno = waymo_anno_class_relabel(anno)
-        # annotation = Image.open(
-        #       '/home/claude/Data/claude_iseauto/labeled/night_fair/annotation_rgb/sq14_000061.png').\
-        #          resize((480, 320), Image.BICUBIC).convert('F')
+        with open('config.json') as f:
+            config = json.load(f)
+
+        model_specialization = config['General']['model_specialization']
+        if model_specialization == 'small':
+            anno = waymo_anno_class_relabel_small_scale(anno)
+        elif model_specialization == 'large':
+            anno = waymo_anno_class_relabel_large_scale(anno)
+        elif model_specialization == 'cross':
+            anno = waymo_anno_class_relabel_cross_scale(anno)
+        else:
+            anno = waymo_anno_class_relabel_all_scale(anno)
+            
         w_orig, h_orig = anno.size  # PIL tuple. (w, h)
         delta = int(h_orig/2)
         top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
@@ -118,7 +127,16 @@ def run(modality, backbone, config):
                            lidar_mean=config['Dataset']['transforms']['lidar_mean_waymo'],
                            lidar_std=config['Dataset']['transforms']['lidar_mean_waymo'],
                            w_ratio=4, h_ratio=4)
-    n_classes = len(config['Dataset']['class_small_scale'])
+
+    model_specialization = config['General']['model_specialization']
+    if model_specialization == 'small':
+        n_classes = len(config['Dataset']['class_small_scale'])
+    elif model_specialization == 'large':
+        n_classes = len(config['Dataset']['class_large_scale'])
+    elif model_specialization == 'cross':
+        n_classes = len(config['Dataset']['class_cross_scale'])
+    else:  # 'all'
+        n_classes = len(config['Dataset']['class_all_scale']) + 1
 
     if backbone == 'clfcn':
         model = FusionNet()
@@ -178,10 +196,22 @@ def run(modality, backbone, config):
                 segmented_image = draw_test_segmentation_map(output_seg)
                 seg_resize = cv2.resize(segmented_image, (480, 160))
 
-                seg_path = cam_path.replace('waymo_dataset/labeled', 'output/clft_seg_results/segment')
-                overlay_path = cam_path.replace('waymo_dataset/labeled', 'output/clft_seg_results/overlay')
+                # Create output directories if they don't exist
+                base_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
+                path_parts = path.split('/')
+                weather_suffix = '_'.join(path_parts[1:3]) if len(path_parts) >= 3 else 'default'
+                folder_name = f"{config['General']['model_specialization']}_specialization_{weather_suffix}"
+                
+                segment_dir = os.path.join(base_output_dir, folder_name, 'segment')
+                overlay_dir = os.path.join(base_output_dir, folder_name, 'overlay')
+                
+                os.makedirs(segment_dir, exist_ok=True)
+                os.makedirs(overlay_dir, exist_ok=True)
 
-                print(f'saving segment result {i}...')
+                seg_path = os.path.join(segment_dir, f"{rgb_name}_segment.png")
+                overlay_path = os.path.join(overlay_dir, f"{rgb_name}_overlay.png")
+
+                print(f'Saving segment result {i} to {seg_path}...')
                 cv2.imwrite(seg_path, seg_resize)
 
                 rgb_cv2 = cv2.imread(cam_path)

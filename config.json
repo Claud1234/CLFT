@@ -54,6 +54,5 @@
         "class_weight_all_scale": [1.0, 4.0, 10.0, 15.0, 20.0, 0.0],
         "class_weight_cross_scale": [1.0, 4.0, 10.0, 15.0, 20.0],
         "class_weight_small_scale": [1.0, 4.0, 10.0],
-        "class_weight_large_scale": [1.0, 4.0, 10.0]
     }
 }

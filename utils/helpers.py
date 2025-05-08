@@ -18,11 +18,6 @@ else:
     all_classes = config['Dataset']['class_all_scale']
 
 class_values = [all_classes.index(cls.lower()) for cls in all_classes]
-label_colors_list = [
-        (0, 0, 0),        # B
-        (0, 255, 0),            # G
-        (0, 0, 255),            # R
-        (100, 100, 100)]
 
 
 def creat_dir(config):
@@ -120,31 +115,65 @@ def waymo_anno_class_relabel_cross_scale(annotation):
     return torch.from_numpy(annotation).unsqueeze(0).long()  # [H,W]->[1,H,W]
 
 
-# TODO: change this when need to visualize.
 def draw_test_segmentation_map(outputs):
     labels = torch.argmax(outputs.squeeze(), dim=0).detach().cpu().numpy()
-    # labels = outputs.squeeze().detach().cpu().numpy()
     red_map = np.zeros_like(labels).astype(np.uint8)
     green_map = np.zeros_like(labels).astype(np.uint8)
-    black_map = np.zeros_like(labels).astype(np.uint8)
+    blue_map = np.zeros_like(labels).astype(np.uint8)
 
-    for label_num in range(0, len(label_colors_list)):
-        if label_num in class_values:
-            idx = labels == label_num
-            red_map[idx] = np.array(label_colors_list)[label_num, 0]
-            green_map[idx] = np.array(label_colors_list)[label_num, 1]
-            black_map[idx] = np.array(label_colors_list)[label_num, 2]
+    model_specialization = config['General']['model_specialization']
+    master_colors = {
+        'background': (0, 0, 0),      # Black
+        'vehicle': (0, 255, 0),       # Green
+        'pedestrian': (0, 0, 255),    # Blue
+        'sign': (255, 0, 0),          # Red
+        'cyclist': (255, 255, 0)      # Yellow
+    }
 
-    segmented_image = np.stack([red_map, green_map, black_map], axis=2)
+    if model_specialization == 'small':
+        class_to_index = {
+            'background': 0,
+            'cyclist': 1,
+            'sign': 2
+        }
+    elif model_specialization == 'large':
+        class_to_index = {
+            'background': 0,
+            'vehicle': 1,
+            'pedestrian': 2
+        }
+    else:  # 'all' or 'cross'
+        class_to_index = {
+            'background': 0,
+            'vehicle': 1,
+            'pedestrian': 2,
+            'sign': 3,
+            'cyclist': 4
+        }
+
+    for class_name, class_index in class_to_index.items():
+        if class_name == 'background':
+            continue  # Skip background class in visualization
+
+        mask = (labels == class_index)
+        if not np.any(mask):
+            continue  # Skip if this class doesn't exist in the output
+
+        red_map[mask] = master_colors[class_name][0]
+        green_map[mask] = master_colors[class_name][1]
+        blue_map[mask] = master_colors[class_name][2]
+
+    # OpenCV uses BGR ordering, so we stack blue, green, red
+    segmented_image = np.stack([blue_map, green_map, red_map], axis=2)
     return segmented_image
 
 
 def image_overlay(image, segmented_image):
-    alpha = 0.4  # how much transparency to apply
-    beta = 1 - alpha  # alpha + beta should equal 1
-    gamma = 0  # scalar added to each sum
-    cv2.addWeighted(segmented_image, alpha, image, beta, gamma, image)
-    return image
+    result = image.copy()
+    mask = (segmented_image[:,:,0] > 0) | (segmented_image[:,:,1] > 0) | (segmented_image[:,:,2] > 0)
+    mask3d = np.stack([mask, mask, mask], axis=2)
+    blended = np.where(mask3d, (segmented_image * 0.5 + image * 0.5).astype(np.uint8), result)
+    return blended
 
 
 def save_model_dict(config, epoch, model, modality, optimizer, save_check=False):

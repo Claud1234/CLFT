@@ -16,10 +16,10 @@ result_screenshots
 .idea
 .ipy*
 slurm*
-*.slurm
+*.slqurm
 *.out
 *.pth
-.ipython*
+.ipynb_checkpoints/*
 ipython/test_img
 *.pkl
 ipython/*.png

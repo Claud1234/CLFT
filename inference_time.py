@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 This is the script to compute the inference time of CLFT and CLFCN. It will load only one frame as input, execute
 the GPU warm up, then repeat the output computation loop 2000 (number you can decide) times, then only capture
@@ -15,7 +15,8 @@ import torchvision.transforms.v2.functional as TF
 
 from clft.clft import CLFT
 from clfcn.fusion_net import FusionNet
-from utils.helpers import waymo_anno_class_relabel_all_scale, waymo_anno_class_relabel_small_scale, waymo_anno_class_relabel_large_scale, waymo_anno_class_relabel_cross_scale
+from utils.helpers import waymo_anno_class_relabel_all_scale, waymo_anno_class_relabel_small_scale, \
+    waymo_anno_class_relabel_large_scale, waymo_anno_class_relabel_cross_scale
 from utils.lidar_process import open_lidar
 from utils.lidar_process import crop_pointcloud
 from utils.lidar_process import get_unresized_lid_img_val
@@ -49,7 +50,7 @@ class OpenInput(object):
         anno_resize = transforms.Resize((384, 384),
                                         interpolation=transforms.InterpolationMode.NEAREST)
         anno = Image.open('./test_images/test_1_anno.png')
-        
+
         model_specialization = self.config.get('General', {}).get('model_specialization', 'all')
 
         if model_specialization == 'small':
@@ -60,7 +61,7 @@ class OpenInput(object):
             anno = waymo_anno_class_relabel_cross_scale(anno)
         else:  # 'all'
             anno = waymo_anno_class_relabel_all_scale(anno)
-        
+
         w_orig, h_orig = anno.size  # PIL tuple. (w, h)
         delta = int(h_orig / 2)
         top_crop_anno = TF.crop(anno, delta, 0, h_orig - delta, w_orig)
@@ -96,6 +97,7 @@ class OpenInput(object):
 def run(modality, backbone, config):
     device = torch.device(config['General']['device']
                           if torch.cuda.is_available() else "cpu")
+    print('Using device:', device)
     open_input = OpenInput(config)
     rgb = open_input.open_rgb().to(device, non_blocking=True)
     rgb = rgb.unsqueeze(0)  # add a batch dimension
@@ -105,9 +107,8 @@ def run(modality, backbone, config):
     if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        checkpoint = torch.load('./model_path/clfcn/checkpoint_289_fusion.pth', map_location=device)
-
-        model.load_state_dict(checkpoint['model_state_dict'])
+        model_path = config['General']['model_path']
+        model.load_state_dict(torch.load(model_path, map_location=device)['model_state_dict'])
 
         model.to(device)
         model.eval()
@@ -122,10 +123,15 @@ def run(modality, backbone, config):
             _ = model(rgb, lidar, 'cross_fusion')
         print('GPU warm up is done with 2000 iterations')
 
+        # VRAM
+        free_vram = torch.cuda.mem_get_info()[0] / 1024 ** 2
+        total_vram = torch.cuda.mem_get_info()[1] / 1024 ** 2
+        print(f'VRAM_used/total: {total_vram - free_vram:.2f}/{total_vram:.2f}GB')
+
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
-                output_seg = model(rgb, lidar, 'cross_fusion')
+                _ = model(rgb, lidar, 'cross_fusion')
                 ender.record()
                 # wait for GPU sync
                 torch.cuda.synchronize()
@@ -138,9 +144,9 @@ def run(modality, backbone, config):
 
     elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
-        
+
         model_specialization = config.get('General', {}).get('model_specialization', 'all')
-        
+
         if model_specialization == 'small':
             nclasses = len(config['Dataset']['class_small_scale'])
         elif model_specialization == 'large':
@@ -148,10 +154,10 @@ def run(modality, backbone, config):
         elif model_specialization == 'cross':
             nclasses = len(config['Dataset']['class_cross_scale'])
         else:  # 'all'
-            nclasses = len(config['Dataset']['class_all_scale']) + 1
-            
+            nclasses = len(config['Dataset']['class_all_scale'])
+
         print(f"Initializing CLFT model with {nclasses} classes for '{model_specialization}' specialization")
-            
+
         model = CLFT(RGB_tensor_size=(3, resize, resize),
                      XYZ_tensor_size=(3, resize, resize),
                      patch_size=config['CLFT']['patch_size'],
@@ -180,6 +186,11 @@ def run(modality, backbone, config):
             _ = model(rgb, lidar, modality)
         print('GPU warm up is done with 2000 iterations')
 
+        # VRAM
+        free_vram = torch.cuda.mem_get_info()[0] / 1024 ** 2
+        total_vram = torch.cuda.mem_get_info()[1] / 1024 ** 2
+        print(f'VRAM_used/total: {total_vram - free_vram:.2f}/{total_vram:.2f}GB')
+
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
@@ -192,7 +203,8 @@ def run(modality, backbone, config):
 
         mean_syn = np.sum(timings) / repetitions
         std_syn = np.std(timings)
-        print(f'Mean execute time of 2000 iterations for {model_specialization} specialization is {mean_syn} milliseconds')
+        print(
+            f'Mean execute time of 2000 iterations for {model_specialization} specialization is {mean_syn} milliseconds')
 
     else:
         sys.exit("A backbone must be specified! (dpt or fcn)")

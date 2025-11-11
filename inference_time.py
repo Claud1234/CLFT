@@ -88,6 +88,7 @@ class OpenInput(object):
 def run(modality, backbone, config):
     device = torch.device(config['General']['device']
                           if torch.cuda.is_available() else "cpu")
+    print('Using device:', device)
     open_input = OpenInput(config)
     rgb = open_input.open_rgb().to(device, non_blocking=True)
     rgb = rgb.unsqueeze(0)  # add a batch dimension
@@ -97,9 +98,9 @@ def run(modality, backbone, config):
     if backbone == 'clfcn':
         model = FusionNet()
         print(f'Using backbone {args.backbone}')
-        checkpoint = torch.load('./model_path/clfcn/checkpoint_289_fusion.pth', map_location=device)
-
-        model.load_state_dict(checkpoint['model_state_dict'])
+        model_path = config['General']['model_path']
+        model.load_state_dict(torch.load(model_path, map_location=device)[
+                                  'model_state_dict'])
 
         model.to(device)
         model.eval()
@@ -114,10 +115,15 @@ def run(modality, backbone, config):
             _ = model(rgb, lidar, 'cross_fusion')
         print('GPU warm up is done with 2000 iterations')
 
+        # VRAM
+        free_vram = torch.cuda.mem_get_info()[0] / 1024 ** 2
+        total_vram = torch.cuda.mem_get_info()[1] / 1024 ** 2
+        print(f'VRAM_used/total: {total_vram - free_vram:.2f}/{total_vram:.2f}GB')
+
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
-                output_seg = model(rgb, lidar, 'cross_fusion')
+                _ = model(rgb, lidar, 'cross_fusion')
                 ender.record()
                 # wait for GPU sync
                 torch.cuda.synchronize()
@@ -130,17 +136,17 @@ def run(modality, backbone, config):
 
     elif backbone == 'clft':
         resize = config['Dataset']['transforms']['resize']
-        model = CLFT(
-            RGB_tensor_size=(3, resize, resize),
-            XYZ_tensor_size=(3, resize, resize),
-            emb_dim=config['General']['emb_dim'],
-            resample_dim=config['General']['resample_dim'],
-            read=config['General']['read'],
-            nclasses=len(config['Dataset']['classes']),
-            hooks=config['General']['hooks'],
-            model_timm=config['General']['model_timm'],
-            type=config['General']['type'],
-            patch_size=config['General']['patch_size'], )
+        model = CLFT(RGB_tensor_size=(3, resize, resize),
+                     XYZ_tensor_size=(3, resize, resize),
+                     patch_size=config['CLFT']['patch_size'],
+                     emb_dim=config['CLFT']['emb_dim'],
+                     resample_dim=config['CLFT']['resample_dim'],
+                     read=config['CLFT']['read'],
+                     hooks=config['CLFT']['hooks'],
+                     reassemble_s=config['CLFT']['reassembles'],
+                     nclasses=len(config['Dataset']['classes']),
+                     type=config['CLFT']['type'],
+                     model_timm=config['CLFT']['model_timm'],)
         print(f'Using backbone {args.backbone}')
 
         model_path = config['General']['model_path']
@@ -160,6 +166,11 @@ def run(modality, backbone, config):
             _,_ = model(rgb, lidar, modality)
         print('GPU warm up is done with 2000 iterations')
 
+        # VRAM
+        free_vram = torch.cuda.mem_get_info()[0] / 1024 ** 2
+        total_vram = torch.cuda.mem_get_info()[1] / 1024 ** 2
+        print(f'VRAM_used/total: {total_vram - free_vram:.2f}/{total_vram:.2f}GB')
+        
         with torch.no_grad():
             for rep in range(repetitions):
                 starter.record()
@@ -184,8 +195,8 @@ if __name__ == '__main__':
                         choices=['rgb', 'lidar', 'cross_fusion'],
                         help='Output mode (lidar, rgb or cross_fusion)')
     parser.add_argument('-bb', '--backbone', required=True,
-                        choices=['fcn', 'dpt'],
-                        help='Use the backbone of training, dpt or fcn')
+                        choices=['clfcn', 'clft'],
+                        help='Use the backbone of training, clfcn or clft')
     args = parser.parse_args()
 
     with open('config.json', 'r') as f:

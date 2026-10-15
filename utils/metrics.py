@@ -26,6 +26,12 @@ recall(2) = d / (b + d)
 '''
 
 
+def _class_counts(values, num_classes):
+    # Integer class labels only: reductions avoid histogram backend limitations.
+    return torch.stack([(values == cls).sum(dtype=torch.float32)
+                        for cls in range(1, num_classes + 1)])
+
+
 def find_overlap(n_classes, output, anno):
     '''
     This is the function for the IEEE-TIV jounrnal paper, which only consider the Vehicle and Human(pedestrian+cyclist)
@@ -55,14 +61,11 @@ def find_overlap(n_classes, output, anno):
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
 
     # (a, d)
-    area_overlap = torch.histc(overlap.float(),
-                               bins=n_classes-1, max=2, min=1)
+    area_overlap = _class_counts(overlap, n_classes - 1)
     # ((a + b), (c + d)
-    area_pred = torch.histc(pred_indices.float(),
-                            bins=n_classes-1, max=2, min=1)
+    area_pred = _class_counts(pred_indices, n_classes - 1)
     # ((a + c), (b + d)
-    area_label = torch.histc(anno.float(),
-                             bins=n_classes-1, max=2, min=1)
+    area_label = _class_counts(anno, n_classes - 1)
     # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 
@@ -104,14 +107,11 @@ def find_overlap_1(n_classes, output, anno):
     overlap = pred_indices * (pred_indices == anno).long()  # (8, 160, 480)
 
     # (a, d)
-    area_overlap = torch.histc(overlap.float(),
-                               bins=n_classes-1, max=3, min=1)
+    area_overlap = _class_counts(overlap, n_classes - 1)
     # ((a + b), (c + d)
-    area_pred = torch.histc(pred_indices.float(),
-                            bins=n_classes-1, max=3, min=1)
+    area_pred = _class_counts(pred_indices, n_classes - 1)
     # ((a + c), (b + d)
-    area_label = torch.histc(anno.float(),
-                             bins=n_classes-1, max=3, min=1)
+    area_label = _class_counts(anno, n_classes - 1)
     # ((a + b + c), (b + c + d)
     area_union = area_pred + area_label - area_overlap
 

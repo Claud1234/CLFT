@@ -10,7 +10,7 @@
 	    "reset_lr":false,
         "early_stop_patience": 50,
         "save_epoch": 20,
-        "model_path":"./model_path/clft/clft_base_fusion_checkpoint_313.pth"
+        "model_path":"./model_path/clft/clft_hybird_fusion_checkpoint_374.pth"
     },
     "Log": {
         "logdir_rgb": "/gpfs/mariana/smbhome/junygu/logs/14-11-2023/",
@@ -26,7 +26,7 @@
         "read": "projection",
         "resample_dim": 256,
         "type": "segmentation",
-        "model_timm": "vit_base_patch16_384",
+        "model_timm": "vit_base_r50_s16_384",
         "loss_depth": "ssi",
         "loss_segmentation": "ce",
         "lr_momentum": 0.99

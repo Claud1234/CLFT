@@ -16,9 +16,7 @@ from utils.helpers import EarlyStopping
 from utils.helpers import save_model_dict
 from utils.helpers import adjust_learning_rate_clft
 from utils.helpers import adjust_learning_rate_clfcn
-
-
-writer = SummaryWriter()
+from utils.device import resolve_device
 
 
 class Trainer(object):
@@ -27,14 +25,13 @@ class Trainer(object):
         self.config = config
         self.args = args
         self.finished_epochs = 0
-        self.device = torch.device(self.config['General']['device']
-                                   if torch.cuda.is_available() else "cpu")
+        self.device = resolve_device(self.config['General'].get('device', 'auto'))
         print("device: %s" % self.device)
 
         if args.backbone == 'clfcn':
-            self.model = FusionNet()
+            self.model = FusionNet(pretrained=(config['General'].get('pretrained', True)
+                                               and not config['General']['resume_training']))
             print(f'Using backbone {args.backbone}')
-            self.optimizer_clfcn = torch.optim.Adam(self.model.parameters(), lr=config['CLFCN']['clfcn_lr'])
 
         elif args.backbone == 'clft':
             resize = config['Dataset']['transforms']['resize']
@@ -48,14 +45,22 @@ class Trainer(object):
                               reassemble_s=config['CLFT']['reassembles'],
                               nclasses=len(config['Dataset']['classes']),
                               type=config['CLFT']['type'],
-                              model_timm=config['CLFT']['model_timm'],)
+                              model_timm=config['CLFT']['model_timm'],
+                              pretrained=(config['General'].get('pretrained', True)
+                                          and not config['General']['resume_training']))
             print(f'Using backbone {args.backbone}')
-            self.optimizer_clft = torch.optim.Adam(self.model.parameters(), lr=config['CLFT']['clft_lr'])
 
         else:
             sys.exit("A backbone must be specified! (clft or clfcn)")
 
         self.model.to(self.device)
+        # Build the optimizer after moving parameters to their training device.
+        lr = config['CLFT']['clft_lr'] if args.backbone == 'clft' else config['CLFCN']['clfcn_lr']
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        if args.backbone == 'clft':
+            self.optimizer_clft = self.optimizer
+        else:
+            self.optimizer_clfcn = self.optimizer
 
         self.nclasses = len(config['Dataset']['classes'])
         weight_loss = torch.Tensor(self.nclasses).fill_(0)
@@ -69,13 +74,14 @@ class Trainer(object):
         if self.config['General']['resume_training'] is True:
             print('Resume training...')
             model_path = self.config['General']['resume_training_model_path']
-            checkpoint = torch.load(model_path, map_location=self.device)
+            # Load on CPU first so CUDA checkpoints are portable to Apple Metal.
+            checkpoint = torch.load(model_path, map_location='cpu', weights_only=True)
 
             if self.config['General']['reset_lr'] is True:
                 print('Reset the epoch to 0')
                 self.finished_epochs = 0
             else:
-                self.finished_epochs = checkpoint['epoch']
+                self.finished_epochs = checkpoint['epoch'] + 1
                 print( f"Finished epochs in previous training: {self.finished_epochs}")
 
             if self.config['General']['epochs'] <= self.finished_epochs:
@@ -86,11 +92,12 @@ class Trainer(object):
                 print('Loading trained model weights...')
                 self.model.load_state_dict(checkpoint['model_state_dict'])
                 print('Loading trained optimizer...')
-                self.optimizer_clft.load_state_dict(checkpoint['optimizer_state_dict'])
-                self.optimizer_clfcn.load_state_dict(checkpoint['optimizer_state_dict'])
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         else:
             print('Training from the beginning')
+
+        self.writer = SummaryWriter(log_dir=config['General'].get('tensorboard_logdir'))
 
     def train_clft(self, train_dataloader, valid_dataloader, modal):
         """
@@ -103,6 +110,7 @@ class Trainer(object):
         for epoch in range(self.finished_epochs, epochs):
             lr = adjust_learning_rate_clft(self.config, self.optimizer_clft, epoch)
             print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
+            self.model.train()
             print('Training...')
             train_loss = 0.0
             overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
@@ -147,14 +155,14 @@ class Trainer(object):
             valid_epoch_loss, valid_epoch_IoU = self.validate_clft(valid_dataloader, modality)
 
             # Plot the train and validation loss in Tensorboard
-            writer.add_scalars('Loss', {'train': train_epoch_loss,
+            self.writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
             # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
+            self.writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
                                                'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
+            self.writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
                                              'valid': valid_epoch_IoU[1]}, epoch)
-            writer.close()
+            self.writer.flush()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clft)
@@ -218,12 +226,12 @@ class Trainer(object):
         for epoch in range(self.finished_epochs, epochs):
             lr = adjust_learning_rate_clfcn(self.config, self.optimizer_clfcn, epoch)
             print('Epoch: {:.0f}, LR: {:.6f}'.format(epoch, lr))
+            self.model.train()
             print('Training...')
             train_loss = 0.0
             overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
             progress_bar = tqdm(train_dataloader)
             for i, batch in enumerate(progress_bar):
-                train_loss = 0.0
                 batch['rgb'] = batch['rgb'].to(self.device, non_blocking=True)
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
                 batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
@@ -275,14 +283,14 @@ class Trainer(object):
             valid_epoch_loss, valid_epoch_IoU = self.validate_clfcn(valid_dataloader, modality)
 
             # Plot the train and validation loss in Tensorboard
-            writer.add_scalars('Loss', {'train': train_epoch_loss,
+            self.writer.add_scalars('Loss', {'train': train_epoch_loss,
                                         'valid': valid_epoch_loss}, epoch)
             # Plot the train and validation IoU in Tensorboard
-            writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
+            self.writer.add_scalars('Vehicle_IoU', {'train': train_epoch_IoU[0],
                                                'valid': valid_epoch_IoU[0]}, epoch)
-            writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
+            self.writer.add_scalars('Human_IoU', {'train': train_epoch_IoU[1],
                                              'valid': valid_epoch_IoU[1]}, epoch)
-            writer.close()
+            self.writer.flush()
 
             early_stop_index = round(valid_epoch_IoU[0].item(), 4)
             early_stopping(early_stop_index, epoch, self.model, modality, self.optimizer_clfcn)
@@ -309,7 +317,7 @@ class Trainer(object):
             for i, batch in enumerate(progress_bar):
                 batch['rgb'] = batch['rgb'].to(self.device, non_blocking=True)
                 batch['lidar'] = batch['lidar'].to(self.device, non_blocking=True)
-                batch['anno'] = batch['anno'].to(self.device, non_blocking=True).squeeze(1)
+                batch['anno'] = batch['anno'].to(self.device, non_blocking=True)
 
                 outputs = self.model(batch['rgb'], batch['lidar'], modality)
 

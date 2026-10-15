@@ -36,9 +36,9 @@ def lidar_dilation(X, Y, Z):
     Z_dilation = cv2.dilate(np.array(Z).astype(np.float32), kernel,
                             iterations=1)
 
-    X_dilation = TF.to_pil_image(X_dilation.astype(np.float32))
-    Y_dilation = TF.to_pil_image(Y_dilation.astype(np.float32))
-    Z_dilation = TF.to_pil_image(Z_dilation.astype(np.float32))
+    X_dilation = TF.to_pil_image(X_dilation.astype(np.float32), mode='F')
+    Y_dilation = TF.to_pil_image(Y_dilation.astype(np.float32), mode='F')
+    Z_dilation = TF.to_pil_image(Z_dilation.astype(np.float32), mode='F')
     return X_dilation, Y_dilation, Z_dilation
 
 
@@ -46,6 +46,10 @@ class Dataset(object):
     def __init__(self, config, split=None, path=None):
         np.random.seed(789)
         self.config = config
+        self.lidar_format = config['Dataset'].get('lidar_format', 'pkl')
+        if self.lidar_format not in ('pkl', 'png'):
+            raise ValueError('Dataset.lidar_format must be pkl or png')
+        self.dataroot = config['Dataset'].get('root', './waymo_dataset/')
 
         list_examples_file = open(path, 'r')
         self.list_examples_cam = np.array(list_examples_file.read().splitlines())
@@ -66,7 +70,7 @@ class Dataset(object):
                                                 transforms.ToTensor(),
                                                 transforms.Normalize(
                                                 mean=config['Dataset']['transforms']['image_mean'],
-                                                std=config['Dataset']['transforms']['image_mean'])])
+                                                std=config['Dataset']['transforms']['image_std'])])
 
         self.anno_resize = transforms.Resize((self.img_size, self.img_size),
                                              interpolation=transforms.InterpolationMode.NEAREST)
@@ -77,7 +81,10 @@ class Dataset(object):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        dataroot = './waymo_dataset/'
+        dataroot = self.dataroot
+
+        if self.config['Dataset']['name'] == 'waymo' and self.lidar_format == 'png':
+            return self._get_png_item(idx)
 
         if self.config['Dataset']['name'] == 'waymo':
             cam_path = os.path.join(dataroot, self.list_examples_cam[idx])
@@ -91,7 +98,7 @@ class Dataset(object):
             anno = waymo_anno_class_relabel(Image.open(anno_path))  # Tensor [1, H, W]
             points_set, camera_coord = open_lidar(lidar_path, w_ratio=4, h_ratio=4,
                                                   lidar_mean=self.config['Dataset']['transforms']['lidar_mean_waymo'],
-                                                  lidar_std=self.config['Dataset']['transforms']['lidar_mean_waymo'])
+                                                  lidar_std=self.config['Dataset']['transforms']['lidar_std_waymo'])
 
         elif self.config['Dataset']['name'] == 'iseauto':
             cam_path = os.path.join(dataroot, self.list_examples_cam[idx])
@@ -161,4 +168,41 @@ class Dataset(object):
         return {'rgb': rgb, 'rgb_orig': rgb_orig,
                 'lidar': lid_images, 'anno': anno}
 
-
+    def _get_png_item(self, idx):
+        """Read rendered LiDAR images; these are not normalized XYZ point clouds."""
+        cam_path = os.path.join(self.dataroot, self.list_examples_cam[idx])
+        anno_path = cam_path.replace('/camera/', '/annotation/')
+        lidar_path = cam_path.replace('/camera/', '/lidar_png/')
+        with Image.open(cam_path) as image:
+            rgb = image.convert('RGB')
+        with Image.open(lidar_path) as image:
+            lidar = image.convert('RGB')
+        with Image.open(anno_path) as image:
+            anno = waymo_anno_class_relabel(image)
+        if rgb.size != lidar.size or anno.shape[-2:] != (rgb.height, rgb.width):
+            raise ValueError(f'Unaligned camera/label/LiDAR PNG sizes: {cam_path}')
+        rgb_orig = transforms.ToTensor()(rgb)
+        w, h = rgb.size
+        images = [TF.crop(image, h // 2, 0, h - h // 2, w)
+                  for image in (rgb, lidar, anno)]
+        if random.random() < self.p_flip:
+            images = [TF.hflip(image) for image in images]
+        if random.random() < self.p_crop:
+            i, j, h, w = transforms.RandomResizedCrop.get_params(
+                images[0], scale=(0.2, 1.0), ratio=(0.75, 4 / 3))
+            images = [TF.crop(image, i, j, h, w) for image in images]
+        if random.random() < self.p_rot:
+            limit = self.config['Dataset']['transforms']['random_rotate_range']
+            angle = random.uniform(-limit, limit)
+            images = [TF.rotate(image, angle,
+                                interpolation=transforms.InterpolationMode.NEAREST if i == 2
+                                else transforms.InterpolationMode.BILINEAR,
+                                fill=3 if i == 2 else 0)
+                      for i, image in enumerate(images)]
+        params = self.config['Dataset']['transforms']
+        normalize = transforms.Compose([
+            transforms.Resize((self.img_size, self.img_size)), transforms.ToTensor(),
+            transforms.Normalize(params['image_mean'], params['image_std'])])
+        return {'rgb': normalize(images[0]), 'rgb_orig': rgb_orig,
+                'lidar': normalize(images[1]),
+                'anno': self.anno_resize(images[2]).squeeze(0)}

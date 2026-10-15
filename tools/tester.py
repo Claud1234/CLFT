@@ -3,6 +3,7 @@
 
 import sys
 import torch
+from utils.device import resolve_device
 import numpy as np
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -19,7 +20,7 @@ class Tester(object):
         self.config = config
         self.args = args
 
-        self.device = torch.device(self.config['General']['device'] if torch.cuda.is_available() else "cpu")
+        self.device = resolve_device(self.config['General'].get('device', 'auto'))
         print("device: %s" % self.device)
 
         if args.backbone == 'clfcn':
@@ -40,11 +41,11 @@ class Tester(object):
                               reassemble_s=config['CLFT']['reassembles'],
                               nclasses=len(config['Dataset']['classes']),
                               type=config['CLFT']['type'],
-                              model_timm=config['CLFT']['model_timm'], )
+                              model_timm=config['CLFT']['model_timm'], pretrained=False)
             print(f'Using backbone {args.backbone}')
 
             model_path = config['General']['model_path']
-            self.model.load_state_dict(torch.load(model_path, map_location=self.device)['model_state_dict'])
+            self.model.load_state_dict(torch.load(model_path, map_location='cpu', weights_only=True)['model_state_dict'])
 
         else:
             sys.exit("A backbone must be specified! (clft or clfcn)")
@@ -54,6 +55,8 @@ class Tester(object):
         self.model.eval()
 
     def test_clft(self, test_dataloader, modal):
+        if len(test_dataloader) == 0:
+            raise ValueError('Empty CLFT test loader')
         print('CLFT Model Testing...')
         overlap_cum, pred_cum, label_cum, union_cum = 0, 0, 0, 0
         modality = modal
@@ -88,10 +91,10 @@ class Tester(object):
                 batch_precision = 1.0 * batch_overlap / (np.spacing(1) + batch_pred)
                 batch_recall = 1.0 * batch_overlap / (np.spacing(1) + batch_label)
 
-                vehicle_pre[i] = batch_precision[0]
-                vehicle_rec[i] = batch_recall[0]
-                human_pre[i] = batch_precision[1]
-                human_rec[i] = batch_recall[1]
+                vehicle_pre[i] = batch_precision[0].item()
+                vehicle_rec[i] = batch_recall[0].item()
+                human_pre[i] = batch_precision[1].item()
+                human_rec[i] = batch_recall[1].item()
 
                 progress_bar.set_description(f'VEHICLE:IoU->{batch_IoU[0]:.4f} Precision->{batch_precision[0]:.4f}'
                                              f'Recall->{batch_recall[0]:.4f}'
@@ -99,9 +102,9 @@ class Tester(object):
                                              f'Recall->{batch_recall[1]:.4f} ')
 
             print('Overall Performance Computing...')
-            cum_IoU = overlap_cum / union_cum
-            cum_precision = overlap_cum / pred_cum
-            cum_recall = overlap_cum / label_cum
+            cum_IoU = overlap_cum / union_cum.clamp_min(1)
+            cum_precision = overlap_cum / pred_cum.clamp_min(1)
+            cum_recall = overlap_cum / label_cum.clamp_min(1)
 
             vehicle_AP = auc_ap(vehicle_pre, vehicle_rec)
             human_AP = auc_ap(human_pre, human_rec)
@@ -112,6 +115,9 @@ class Tester(object):
                   f'CUM_Recall->{cum_recall[1]:.4f} Average Precision->{human_AP:.4f}')
             print('-----------------------------------------')
             print('Testing of the subset completed')
+            return {'device': str(self.device), 'iou': cum_IoU.cpu().tolist(),
+                    'precision': cum_precision.cpu().tolist(), 'recall': cum_recall.cpu().tolist(),
+                    'vehicle_ap': float(vehicle_AP), 'human_ap': float(human_AP)}
 
     def test_clfcn(self, test_dataloader, modal):
         print('CLFCN Model Testing...')

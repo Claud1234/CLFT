@@ -11,6 +11,7 @@ https://github.com/user-attachments/assets/cd51585e-2f66-4ff5-bb5b-689d3fb7d4c0
 
 
 # News
+- [29-10-2026] CLFT can now be trained on Apple GPU with mps backend. Part of the code is optimized and will be retrained with same Waymo datase. 
 - [06-02-2026] The public link to download the Waymo dataset (around 70 GB) that used in this project is no longer available. Please write to claude.gujunyi@gmail.com or open an issue if you need the dataset, we can figure out a way to transfer the dataset. 
 - [02-01-2025] The training paths of CLFT and CLFCN are all available for downloading. Three paths for CLFCN corresponding to rgb, lidar, and cross-fusion modalities. Five paths for CLFT corresponding to base-fusion, large-fusion, hybrid-rgb, hybrid-lidar, and hybrid-fusion. All paths trained at TalTech HPC in the environment specified below. 
 - [30-09-2024] The train.py and test.py scripts are available. The models trained for paper's experiments are available for downloading. 
@@ -47,7 +48,6 @@ einops-0.7.0
 ```
 Moreover, we provide our conda yml file in the repo. 
 We recommend to implement this environment if you are using our models.    
-
 
 ## Dataset
 - [Dataset](waymo_dataset/README.md)
@@ -161,5 +161,3 @@ If anything in this repo has a use for your work, please considering to cite our
   pages={1-12},
   doi={10.1109/TIV.2024.3454971}}
 ```
-
-

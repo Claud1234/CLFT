@@ -1,0 +1,109 @@
+{
+    "General": {
+        "device": "mps",
+        "epochs": 400,
+        "batch_size": 2,
+        "path_predicted_images": "output",
+        "seed": 0,
+        "resume_training": false,
+        "resume_training_model_path": "./model_path/clft/clft_hybird_fusion_checkpoint_374.pth",
+        "reset_lr": false,
+        "early_stop_patience": 50,
+        "save_epoch": 20,
+        "model_path": "./model_path/clft/clft_hybird_fusion_checkpoint_374.pth",
+        "num_workers": 0,
+        "tensorboard_logdir": "./runs/macos"
+    },
+    "Log": {
+        "logdir_rgb": "./logs/rgb/",
+        "logdir_lidar": "./logs/lidar/",
+        "logdir_fusion": "./logs/fusion/"
+    },
+    "CLFT": {
+        "clft_lr": 8e-05,
+        "patch_size": 16,
+        "emb_dim": 768,
+        "hooks": [
+            2,
+            5,
+            8,
+            11
+        ],
+        "reassembles": [
+            4,
+            8,
+            16,
+            32
+        ],
+        "read": "projection",
+        "resample_dim": 256,
+        "type": "segmentation",
+        "model_timm": "vit_base_r50_s16_384",
+        "loss_depth": "ssi",
+        "loss_segmentation": "ce",
+        "lr_momentum": 0.99
+    },
+    "CLFCN": {
+        "clfcn_lr": 6e-05,
+        "lr_coefficient": 0.9
+    },
+    "Dataset": {
+        "name": "waymo",
+        "lidar_format": "pkl",
+        "transforms": {
+            "resize": 384,
+            "random_rotate_range": 20,
+            "p_flip": 0.5,
+            "p_crop": 0.3,
+            "p_rot": 0.4,
+            "image_mean": [
+                0.485,
+                0.456,
+                0.406
+            ],
+            "image_std": [
+                0.229,
+                0.224,
+                0.225
+            ],
+            "lidar_mean_waymo": [
+                -0.17263354,
+                0.85321806,
+                24.5527253
+            ],
+            "lidar_std_waymo": [
+                7.34546552,
+                1.17227659,
+                15.83745082
+            ],
+            "lidar_mean_iseauto": [
+                -0.079,
+                0.033,
+                15.9
+            ],
+            "lidar_std_iseauto": [
+                7.79,
+                2.156,
+                7.6
+            ]
+        },
+        "classes": {
+            "0": {
+                "name": "background",
+                "color": 0
+            },
+            "1": {
+                "name": "car",
+                "color": 1
+            },
+            "2": {
+                "name": "person",
+                "color": 2
+            },
+            "3": {
+                "name": "ignore",
+                "color": 3
+            }
+        }
+    }
+}

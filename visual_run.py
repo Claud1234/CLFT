@@ -14,6 +14,7 @@ import os
 import cv2
 import sys
 import torch
+from utils.device import resolve_device
 import argparse
 import numpy as np
 from PIL import Image
@@ -110,8 +111,7 @@ class OpenInput(object):
 
 
 def run(modality, backbone, config):
-    device = torch.device(config['General']['device']
-                          if torch.cuda.is_available() else "cpu")
+    device = resolve_device(config['General'].get('device', 'auto'))
     open_input = OpenInput(backbone,
                            cam_mean=config['Dataset']['transforms']['image_mean'],
                            cam_std=config['Dataset']['transforms']['image_mean'],

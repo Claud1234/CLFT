@@ -67,9 +67,10 @@ def get_unresized_lid_img_val(h, w, points_set, camera_coord):
     Y[(rows.astype(int), cols.astype(int))] = points_set[:, 1]
     Z[(rows.astype(int), cols.astype(int))] = points_set[:, 2]
 
-    X = TF.to_pil_image(X.astype(np.float32))
-    Y = TF.to_pil_image(Y.astype(np.float32))
-    Z = TF.to_pil_image(Z.astype(np.float32))
+    # XYZ values are signed floats, not 8-bit display intensities.
+    X = TF.to_pil_image(X.astype(np.float32), mode='F')
+    Y = TF.to_pil_image(Y.astype(np.float32), mode='F')
+    Z = TF.to_pil_image(Z.astype(np.float32), mode='F')
 
     return X, Y, Z
 
@@ -86,8 +87,8 @@ def get_resized_lid_img_val(crop_size, h, w, points_set, camera_coord):
     Y[(rows.astype(int), cols.astype(int))] = points_set[:, 1]
     Z[(rows.astype(int), cols.astype(int))] = points_set[:, 2]
 
-    X = TF.to_pil_image(X.astype(np.float32))
-    Y = TF.to_pil_image(Y.astype(np.float32))
-    Z = TF.to_pil_image(Z.astype(np.float32))
+    X = TF.to_pil_image(X.astype(np.float32), mode='F')
+    Y = TF.to_pil_image(Y.astype(np.float32), mode='F')
+    Z = TF.to_pil_image(Z.astype(np.float32), mode='F')
 
     return X, Y, Z

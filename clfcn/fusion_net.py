@@ -7,8 +7,9 @@ import torchvision
 
 
 class FusionNet(nn.Module):
-    def __init__(self):
+    def __init__(self, pretrained=True):
         super(FusionNet, self).__init__()
+        self.pretrained = pretrained
 
         self.backbone_rgb, self.intermediate_single_rgb, self.classifier_rgb =self.get_split_model()
 
@@ -17,7 +18,11 @@ class FusionNet(nn.Module):
         _, self.intermediate_single_fusion, self.classifier_fusion = self.get_split_model(isFusion=True)
 
     def get_split_model(self, isFusion=False):
-        full_model = torchvision.models.segmentation.fcn_resnet50(pretrained=False, num_classes=4)
+        full_model = torchvision.models.segmentation.fcn_resnet50(
+            weights=None,
+            weights_backbone=(torchvision.models.ResNet50_Weights.DEFAULT
+                              if self.pretrained else None),
+            num_classes=4)
         backbone = nn.Sequential(*list(full_model.backbone.children())[:-1])
         intermediate_single = nn.Sequential(*list(full_model.backbone.children())[-1:])
         classifier = nn.Sequential(*list(full_model.classifier.children()))

@@ -24,7 +24,8 @@ class CLFT(nn.Module):
                  reassemble_s=None,
                  nclasses=None,
                  type=None,
-                 model_timm=None
+                 model_timm=None,
+                 pretrained=True
                  # num_layers_encoder=24,
                  # transformer_dropout=0,
                  ):
@@ -39,7 +40,7 @@ class CLFT(nn.Module):
         """
         super().__init__()
 
-        self.transformer_encoders = timm.create_model(model_timm, pretrained=True)
+        self.transformer_encoders = timm.create_model(model_timm, pretrained=pretrained)
         self.type_ = type
 
         # Register hooks
@@ -71,20 +72,23 @@ class CLFT(nn.Module):
             self.head_segmentation = HeadSeg(resample_dim, nclasses=nclasses)
 
     def forward(self, rgb, lidar, modal='rgb'):
-        t = self.transformer_encoders(lidar)
+        if modal not in ('rgb', 'lidar', 'cross_fusion'):
+            raise ValueError(f'Unknown CLFT modality: {modal}')
+        # Capture each sensor's features before the shared encoder hooks are reused.
+        rgb_features = self._encode(rgb) if modal != 'lidar' else None
+        lidar_features = self._encode(lidar) if modal != 'rgb' else None
         previous_stage = None
         for i in np.arange(len(self.fusions)-1, -1, -1):
             hook_to_take = 't'+str(self.hooks[i])
-            activation_result = self.activation[hook_to_take]
             if modal == 'rgb':
-                reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
+                reassemble_result_RGB = self.reassembles_RGB[i](rgb_features[hook_to_take])
                 reassemble_result_XYZ = torch.zeros_like(reassemble_result_RGB) # this is just to keep the space allocated but it will not be used later in fusion
             if modal == 'lidar':
-                reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
+                reassemble_result_XYZ = self.reassembles_XYZ[i](lidar_features[hook_to_take])
                 reassemble_result_RGB = torch.zeros_like(reassemble_result_XYZ) # this is just to keep the space allocated but it will not be used later in fusion
             if modal == 'cross_fusion':
-                reassemble_result_RGB = self.reassembles_RGB[i](activation_result) #claude check here
-                reassemble_result_XYZ = self.reassembles_XYZ[i](activation_result) #claude check here
+                reassemble_result_RGB = self.reassembles_RGB[i](rgb_features[hook_to_take])
+                reassemble_result_XYZ = self.reassembles_XYZ[i](lidar_features[hook_to_take])
             
             fusion_result = self.fusions[i](reassemble_result_RGB, reassemble_result_XYZ, previous_stage, modal) #claude check here
             previous_stage = fusion_result
@@ -95,6 +99,13 @@ class CLFT(nn.Module):
         if self.head_segmentation != None:
             out_segmentation = self.head_segmentation(previous_stage)
         return out_depth, out_segmentation
+
+    def _encode(self, sensor):
+        self.activation.clear()
+        self.transformer_encoders(sensor)
+        features = self.activation.copy()
+        self.activation.clear()
+        return features
 
     def _get_layers_from_hooks(self, hooks):
         def get_activation(name):

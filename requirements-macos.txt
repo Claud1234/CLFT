@@ -1,0 +1,12 @@
+# Native arm64 Python 3.11 recommended. Keep timm compatible with paper weights.
+torch==2.9.0
+torchvision==0.24.0
+numpy>=1.26,<2
+timm==0.9.8
+einops==0.7.0
+tensorboard>=2.15,<3
+tqdm>=4.66,<5
+Pillow>=10,<12
+opencv-python>=4.8,<4.12
+matplotlib>=3.8,<4
+huggingface-hub>=0.16,<1

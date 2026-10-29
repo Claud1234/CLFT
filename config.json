@@ -8,7 +8,7 @@
         "resume_training":false,
         "resume_training_model_path": "/gpfs/mariana/smbhome/junygu/logs/17-11-2023/checkpoint_280.pth",
 	    "reset_lr":false,
-        "early_stop_patience": 50,
+        "early_stop_patience": 100,
         "save_epoch": 20,
         "model_path":"./model_path/clft/clft_hybird_fusion_checkpoint_374.pth"
     },
